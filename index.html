@@ -224,7 +224,7 @@ function slimMesh(mdl, bb, ct, sz, tw, td, mul) {
   return {o, k};
  });
  const v = V(0,0,0), X = [], Z = [], lo = bb.min.y + sz.y * .59, hi = bb.min.y + sz.y * .73;
- info.forEach(({o, k}) => {const p = o.geometry.attributes.position; for (let i = 0; i < p.count; i++) {if (k[i] < .9) continue; v.fromBufferAttribute(p, i).applyMatrix4(o.matrixWorld); if (v.y > lo && v.y < hi) {X.push(Math.abs(v.x - ct.x)); Z.push(v.z - ct.z)}}});
+ info.forEach(({o, k}) => {const p = o.geometry.attributes.position; for (let i = 0; i < p.count; i++) {if (k[i] < .9) continue; v.fromBufferAttribute(p, i).applyMatrix4(mdl.matrixWorld); if (v.y > lo && v.y < hi) {X.push(Math.abs(v.x - ct.x)); Z.push(v.z - ct.z)}}});
  if (X.length < 50) {console.warn('Armory360: chest not measurable, mesh not slimmed'); return}
  X.sort((a, b) => a - b); Z.sort((a, b) => a - b);
  const cw = 2 * X[Math.floor(X.length * .95)], cd = Z[Math.floor(Z.length * .97)] - Z[Math.floor(Z.length * .03)];
@@ -232,8 +232,8 @@ function slimMesh(mdl, bb, ct, sz, tw, td, mul) {
  console.log('Armory360 chest width/height', (cw / sz.y).toFixed(3), 'depth/height', (cd / sz.y).toFixed(3), '-> slim x', fx.toFixed(2), 'z', fz.toFixed(2), '(?slim=0.9 scales this)');
  const mi = new T.Matrix4();
  info.forEach(({o, k}) => {
-  const p = o.geometry.attributes.position; mi.copy(o.matrixWorld).invert();
-  for (let i = 0; i < p.count; i++) {v.fromBufferAttribute(p, i).applyMatrix4(o.matrixWorld); v.x = ct.x + (v.x - ct.x) * (1 - (1 - fx) * k[i]); v.z = ct.z + (v.z - ct.z) * (1 - (1 - fz) * k[i]); v.applyMatrix4(mi); p.setXYZ(i, v.x, v.y, v.z)}
+  const p = o.geometry.attributes.position; mi.copy(mdl.matrixWorld).invert();
+  for (let i = 0; i < p.count; i++) {v.fromBufferAttribute(p, i).applyMatrix4(mdl.matrixWorld); v.x = ct.x + (v.x - ct.x) * (1 - (1 - fx) * k[i]); v.z = ct.z + (v.z - ct.z) * (1 - (1 - fz) * k[i]); v.applyMatrix4(mi); p.setXYZ(i, v.x, v.y, v.z)}
   p.needsUpdate = true; o.geometry.computeBoundingSphere(); o.geometry.computeBoundingBox();
  });
 }
@@ -258,6 +258,7 @@ function onModel(gltf) {
  mdl.traverse(o => {
   if (o.isMesh) {
    o.castShadow = o.receiveShadow = true; o.frustumCulled = false;
+   if (o.isSkinnedMesh) {console.log('Armory360 skinned mesh', o.name, 'bindMatrix (node transform) before reset:', Array.from(o.bindMatrix.elements).map(v => +v.toFixed(4)).join(', ')); o.bindMatrix.identity(); o.bindMatrixInverse.identity()}
    if (o.morphTargetInfluences && o.morphTargetInfluences.length) {console.log('Armory360 morph targets on', o.name, o.morphTargetDictionary, Array.from(o.morphTargetInfluences)); o.morphTargetInfluences.fill(0)}
    (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => {
     if (m.envMapIntensity !== undefined) m.envMapIntensity = .45;
