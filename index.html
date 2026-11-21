@@ -249,7 +249,7 @@ function onModel(gltf) {
 }
 const gltfLoader = new T.GLTFLoader();
 function loadModel(sex) {
- const t = ++LT, url = './basic_human_' + sex + '.glb'; SEX = sex; $('status').textContent = 'Loading 3D model…';
+ const t = ++LT, url = './' + sex + '.glb'; SEX = sex; $('status').textContent = 'Loading 3D model…';
  gltfLoader.load(url, g => {if (t == LT) onModel(g)}, undefined, () => {if (t != LT) return; onModel({scene:dummy()}); $('status').textContent = url + ' not found, showing placeholder'});
 }
 
