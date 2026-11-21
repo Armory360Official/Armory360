@@ -176,7 +176,7 @@ const bl = new T.Mesh(new T.PlaneGeometry(1.7, 1.7), new T.MeshBasicMaterial({ma
 // so the height slider never changes width and the weight slider never changes height.
 const wr = new T.Group(); man.add(wr);
 let MS = 1, HF = 1, BW = 1, BWm = 1, FIT = 1, FZ = 1, SHO = null, TORSO = null, REST = null, ARMS = [], GL = [], RIG = null, HDY = 0, CDY = 0, RG = null, HZ = 0, SEX = 'male', LT = 0;
-const TARGET_H = 1.78, GS = TARGET_H / 1.86, POSE_ARMS = !/[?&]pose=0/.test(location.search), CURL = /[?&]curl=1/.test(location.search), STRAIGHTEN = !/[?&]straight=0/.test(location.search), HINT = 'Scroll to zoom at the cursor · drag to orbit · right-drag or Shift-drag to pan';
+const TARGET_H = 1.78, GS = TARGET_H / 1.86, POSE_ARMS = !/[?&]pose=0/.test(location.search), CURL = /[?&]curl=1/.test(location.search), STRAIGHTEN = /[?&]straight=1/.test(location.search), HINT = 'Scroll to zoom at the cursor · drag to orbit · right-drag or Shift-drag to pan';
 const gear = new T.Group(), cg = new T.Group(); man.add(gear, cg);
 const FN = ['thumb','index','middle','ring','pinky'];
 
@@ -211,6 +211,30 @@ function bounds(root, log, n) {   // true world-space bounds of the posed mesh (
  });
  if (log) {console.groupCollapsed('Armory360 meshes'); console.table(info); console.groupEnd()}
  return box;
+}
+function slimMesh(mdl, bb, ct, sz, tw, td, mul) {
+ // Slim the bind-pose mesh itself: torso, hips and legs are pulled toward the body axis, while arms/hands and head/neck keep their size (weights blend smoothly).
+ mdl.updateMatrixWorld(true);
+ const AR = /arm|hand|shoulder|clav|thumb|index|middle|ring|pinky|pinkie|little|finger/, HD = /head|neck/, ms = [];
+ mdl.traverse(o => {if (o.isSkinnedMesh && o.geometry.attributes.skinIndex && o.skeleton) ms.push(o)});
+ const info = ms.map(o => {
+  const g = o.geometry, n = g.attributes.position.count, si = g.attributes.skinIndex, sw = g.attributes.skinWeight, bn = o.skeleton.bones.map(b => strip(b.name)), k = new Float32Array(n);
+  for (let i = 0; i < n; i++) {let a = 0, h = 0; for (let j = 0; j < 4; j++) {const w = sw.getComponent(i, j), nm = bn[si.getComponent(i, j)] || ''; if (AR.test(nm)) a += w; else if (HD.test(nm)) h += w} k[i] = (1 - Math.min(a, 1)) * (1 - Math.min(h, 1))}
+  return {o, k};
+ });
+ const v = V(0,0,0), X = [], Z = [], lo = bb.min.y + sz.y * .59, hi = bb.min.y + sz.y * .73;
+ info.forEach(({o, k}) => {const p = o.geometry.attributes.position; for (let i = 0; i < p.count; i++) {if (k[i] < .9) continue; v.fromBufferAttribute(p, i).applyMatrix4(o.matrixWorld); if (v.y > lo && v.y < hi) {X.push(Math.abs(v.x - ct.x)); Z.push(v.z - ct.z)}}});
+ if (X.length < 50) {console.warn('Armory360: chest not measurable, mesh not slimmed'); return}
+ X.sort((a, b) => a - b); Z.sort((a, b) => a - b);
+ const cw = 2 * X[Math.floor(X.length * .95)], cd = Z[Math.floor(Z.length * .97)] - Z[Math.floor(Z.length * .03)];
+ const fx = cl(tw * sz.y / cw * mul, .45, 1), fz = cl(td * sz.y / cd * mul, .45, 1);
+ console.log('Armory360 chest width/height', (cw / sz.y).toFixed(3), 'depth/height', (cd / sz.y).toFixed(3), '-> slim x', fx.toFixed(2), 'z', fz.toFixed(2), '(?slim=0.9 scales this)');
+ const mi = new T.Matrix4();
+ info.forEach(({o, k}) => {
+  const p = o.geometry.attributes.position; mi.copy(o.matrixWorld).invert();
+  for (let i = 0; i < p.count; i++) {v.fromBufferAttribute(p, i).applyMatrix4(o.matrixWorld); v.x = ct.x + (v.x - ct.x) * (1 - (1 - fx) * k[i]); v.z = ct.z + (v.z - ct.z) * (1 - (1 - fz) * k[i]); v.applyMatrix4(mi); p.setXYZ(i, v.x, v.y, v.z)}
+  p.needsUpdate = true; o.geometry.computeBoundingSphere(); o.geometry.computeBoundingBox();
+ });
 }
 function poseOk() {   // reject a pose that stretches the mesh or changes its height
  if (!REST) return true; const z = bounds(RIG, false, 4000).getSize(V(0,0,0));
@@ -250,13 +274,14 @@ function onModel(gltf) {
  });
  // real mesh bounds (skinned vertices included): uniform scale to TARGET_H keeps natural proportions, feet land on y = 0, body centered
  const bb = bounds(mdl, true), sz = bb.getSize(V(0,0,0)), ct = bb.getCenter(V(0,0,0));
+ if (!bb.isEmpty() && sz.y > 1e-6) slimMesh(mdl, bb, ct, sz, SEX == 'female' ? .155 : .17, SEX == 'female' ? .115 : .125, +new URLSearchParams(location.search).get('slim') || 1);
  if (bb.isEmpty() || !(sz.y > 1e-6)) {console.warn('Armory360: could not measure model, using scale 1'); MS = 1}
  else {MS = TARGET_H / sz.y; mdl.position.x -= ct.x; mdl.position.z -= ct.z; mdl.position.y -= bb.min.y}
  console.log('Armory360 model size (units):', sz.x.toFixed(3), sz.y.toFixed(3), sz.z.toFixed(3), 'scale:', MS);
  // a T-pose arm span should be about the body height; if the model is wider than that, slim x/z (arms, shoulders, torso, legs) to fit
  const fq = new URLSearchParams(location.search).get('fit'), span = sz.x / (sz.y || 1);
  const up_ = new URLSearchParams(location.search), sl = +up_.get('slim') || .85, dp = +up_.get('depth') || .92;
- FIT = fq ? cl(+fq || 1, .4, 1.2) : (span > 1.08 ? cl(1 / span, .55, 1) : 1) * sl; FZ = FIT * dp;   // ?slim=0.8 and ?depth=0.9 tune the width and front-to-back thickness
+ FIT = fq ? cl(+fq || 1, .4, 1.2) : (span > 1.08 ? cl(1 / span, .55, 1) : 1) * sl; FZ = FIT * dp; FIT = FZ = 1;   // thickness is baked into the mesh (slimMesh), never squashed at the root   // ?slim=0.8 and ?depth=0.9 tune the width and front-to-back thickness
  console.log('Armory360 arm span / height:', span.toFixed(2), '-> width fit', FIT.toFixed(2), '(try ?fit=0.8 in the URL to override)');
  ARMS = [-1, 1].map(s => {const a = ar[s], f = {}; for (const k in a.fingers) f[k] = a.fingers[k].sort((p, q) => p.d - q.d).map(x => x.b); return {s, up:a.up, lo:a.lo, hand:a.hand, fingers:f}});
  const armsOk = ARMS.some(a => a.up && a.lo && a.hand);
