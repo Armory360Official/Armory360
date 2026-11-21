@@ -176,7 +176,7 @@ const bl = new T.Mesh(new T.PlaneGeometry(1.7, 1.7), new T.MeshBasicMaterial({ma
 // so the height slider never changes width and the weight slider never changes height.
 const wr = new T.Group(); man.add(wr);
 let MS = 1, HF = 1, BW = 1, BWm = 1, ARMS = [], GL = [], RIG = null, HDY = 0, CDY = 0, RG = null, HZ = 0, SEX = 'male', LT = 0;
-const TARGET_H = 1.86, HINT = 'Scroll to zoom at the cursor · drag to orbit · right-drag or Shift-drag to pan';
+const TARGET_H = 1.78, GS = TARGET_H / 1.86, POSE_ARMS = false, HINT = 'Scroll to zoom at the cursor · drag to orbit · right-drag or Shift-drag to pan';
 const gear = new T.Group(), cg = new T.Group(); man.add(gear, cg);
 const FN = ['thumb','index','middle','ring','pinky'];
 
@@ -199,19 +199,23 @@ function dummy() {   // simple stand-in until the .glb files exist
  return g;
 }
 function clearModel() {while (wr.children.length) wr.remove(wr.children[0]); ARMS = []; GL = []; RIG = null}
-function bounds(root) {
- root.updateMatrixWorld(true); const box = new T.Box3(), v = V(0,0,0);
+function bounds(root, log) {   // true world-space bounds of the posed mesh (skinned vertices included); ignores hidden or ground/stand-like helper meshes
+ root.updateMatrixWorld(true); const box = new T.Box3(), v = V(0,0,0), info = [];
  root.traverse(o => {
   if (!o.isMesh || !o.geometry.attributes.position) return;
-  const pos = o.geometry.attributes.position, sk = o.isSkinnedMesh && typeof o.boneTransform == 'function' && o.geometry.attributes.skinIndex, step = Math.max(1, Math.floor(pos.count / 20000));
-  for (let i = 0; i < pos.count; i += step) {if (sk) {v.set(0,0,0); o.boneTransform(i, v)} else v.fromBufferAttribute(pos, i); box.expandByPoint(v.applyMatrix4(o.matrixWorld))}
+  const pos = o.geometry.attributes.position, sk = o.isSkinnedMesh && typeof o.boneTransform == 'function' && o.geometry.attributes.skinIndex, step = Math.max(1, Math.floor(pos.count / 20000)), mb = new T.Box3();
+  for (let i = 0; i < pos.count; i += step) {if (sk) {v.set(0,0,0); o.boneTransform(i, v)} else v.fromBufferAttribute(pos, i); mb.expandByPoint(v.applyMatrix4(o.matrixWorld))}
+  const skip = o.visible === false || /ground|floor|plane|shadow|backdrop|background|pedestal/i.test(o.name), sz = mb.isEmpty() ? V(0,0,0) : mb.getSize(V(0,0,0));
+  if (log) info.push({mesh:o.name || '(unnamed)', skinned:!!o.isSkinnedMesh, ignored:skip, w:+sz.x.toFixed(3), h:+sz.y.toFixed(3), d:+sz.z.toFixed(3)});
+  if (!skip && !mb.isEmpty()) box.union(mb);
  });
+ if (log) {console.groupCollapsed('Armory360 meshes'); console.table(info); console.groupEnd()}
  return box;
 }
 function onModel(gltf) {
  clearModel();
  const mdl = gltf.scene; mdl.updateMatrixWorld(true);
- let head = null, top = null; const names = [], ar = {1:{fingers:{}}, '-1':{fingers:{}}};
+ let head = null, top = null; const bones = [], ar = {1:{fingers:{}}, '-1':{fingers:{}}};
  mdl.traverse(o => {
   if (o.isMesh) {
    o.castShadow = o.receiveShadow = true; o.frustumCulled = false;
@@ -224,7 +228,7 @@ function onModel(gltf) {
    });
   }
   if (o.isBone) {
-   o.userData.rq = o.quaternion.clone(); names.push(o.name);
+   o.userData.rq = o.quaternion.clone(); bones.push(o);
    const n = strip(o.name);
    if (/head.?top|head_?end/.test(n)) top = o; else if (/(^|[_.\-])head$/.test(n)) head = o;
    const p = parseBone(o.name);
@@ -232,20 +236,25 @@ function onModel(gltf) {
   }
  });
  // real mesh bounds (skinned vertices included): uniform scale to TARGET_H keeps natural proportions, feet land on y = 0, body centered
- const bb = bounds(mdl), sz = bb.getSize(V(0,0,0)), ct = bb.getCenter(V(0,0,0));
+ const bb = bounds(mdl, true), sz = bb.getSize(V(0,0,0)), ct = bb.getCenter(V(0,0,0));
  if (bb.isEmpty() || !(sz.y > 1e-6)) {console.warn('Armory360: could not measure model, using scale 1'); MS = 1}
  else {MS = TARGET_H / sz.y; mdl.position.x -= ct.x; mdl.position.z -= ct.z; mdl.position.y -= bb.min.y}
  console.log('Armory360 model size (units):', sz.x.toFixed(3), sz.y.toFixed(3), sz.z.toFixed(3), 'scale:', MS);
  ARMS = [-1, 1].map(s => {const a = ar[s], f = {}; for (const k in a.fingers) f[k] = a.fingers[k].sort((p, q) => p.d - q.d).map(x => x.b); return {s, up:a.up, lo:a.lo, hand:a.hand, fingers:f}});
  const armsOk = ARMS.some(a => a.up && a.lo && a.hand);
- console.log('Armory360 bones (' + names.length + '):', names.join(', '));
+ const rows = bones.map(b => {
+  const q = b.quaternion, e = new T.Euler().setFromQuaternion(q, 'XYZ'), wq = b.getWorldQuaternion(new T.Quaternion()), f = v => +v.toFixed(3);
+  const ax = v => {const d = v.applyQuaternion(wq); return [f(d.x), f(d.y), f(d.z)].join(', ')};
+  return {bone:b.name, parent:b.parent ? b.parent.name : '', eulerXYZ_deg:[e.x, e.y, e.z].map(r => +(r * 57.2958).toFixed(1)).join(', '), quat_xyzw:[q.x, q.y, q.z, q.w].map(f).join(', '), localX_in_model:ax(V(1,0,0)), localY_in_model:ax(V(0,1,0)), localZ_in_model:ax(V(0,0,1)), pos:[b.position.x, b.position.y, b.position.z].map(f).join(', ')};
+ });
+ console.groupCollapsed('Armory360 skeleton: ' + rows.length + ' bones (rest rotations and local axes)'); console.table(rows); console.log(JSON.stringify(rows)); console.groupEnd();
  console.log('Armory360 arm mapping:', ARMS.map(a => ({side:a.s, up:a.up && a.up.name, lo:a.lo && a.lo.name, hand:a.hand && a.hand.name, fingers:Object.fromEntries(Object.entries(a.fingers).map(([k, v]) => [k, v.map(b => b.name)]))})));
  wr.add(mdl); RIG = mdl; wr.scale.setScalar(MS); man.updateMatrixWorld(true);
  // gear anchors follow the skeleton: helmet/goggles to the head bones, carrier + rifle to the shoulder line
  const ml = b => man.worldToLocal(b.getWorldPosition(V(0,0,0)));
- HDY = top ? cl(ml(top).y - .11 - 1.752, -.1, .1) : 0;
- const sy = ARMS.filter(a => a.up).map(a => ml(a.up).y); CDY = sy.length ? cl(sy.reduce((x, y) => x + y) / sy.length - 1.5, -.08, .08) : 0;
- $('status').textContent = armsOk || names.length == 0 ? HINT : 'Arm bones not recognised, rifle grip pose disabled (see console for bone names)'; apply(); build();
+ HDY = cl((top ? ml(top).y : TARGET_H) / GS - .11 - 1.752, -.1, .1);   // gear is authored for a 1.86 figure, so convert to gear units
+ const sy = ARMS.filter(a => a.up).map(a => ml(a.up).y); CDY = sy.length ? cl(sy.reduce((x, y) => x + y) / sy.length / GS - 1.5, -.08, .08) : 0;
+ $('status').textContent = armsOk || bones.length == 0 ? HINT : 'Hand bones not recognised, gloves hidden (see console for bone names)'; apply(); build();
 }
 const gltfLoader = new T.GLTFLoader();
 function loadModel(sex) {
@@ -321,22 +330,22 @@ function layout() {
    const k = .78 / HF, d = V(.12, -.06, .99).normalize(); RG.scale.setScalar(k); RG.quaternion.setFromUnitVectors(V(0, 0, 1), d);
    RG.position.copy(V(-.1 * BWm, 1.47 + CDY, .13 * BWm)).add(d.clone().multiplyScalar(.375 * k));
    const Lc = (x, y, z) => V(x, y, z).multiplyScalar(k).applyQuaternion(RG.quaternion).add(RG.position);
-   pose([Lc(-.03, -.09, -.105), Lc(.04, -.012, HZ - .06)], [Lc(.012, -.09, -.105), Lc(-.012, -.015, HZ - .06)]);
+   if (POSE_ARMS) pose([Lc(-.03, -.09, -.105), Lc(.04, -.012, HZ - .06)].map(p => p.multiplyScalar(GS)), [Lc(.012, -.09, -.105), Lc(-.012, -.015, HZ - .06)].map(p => p.multiplyScalar(GS))); else restPose();
   } else restPose();   // no rifle: arms and fingers stay in the model's T-pose
  } catch (err) {console.warn('Armory360 pose skipped:', err)}
  wr.scale.set(MS * BWm, MS, MS * BWm);   // always applied, so height/weight keep working even if posing fails
 }
 
 /* ---------- gear ---------- */
-function setGlove(gv) {   // gloves are small shells attached to the hand bones
+function setGlove(gv) {   // gloves are small shells on the hand bones, sized from the measured hand length
  GL.forEach(g => g.parent && g.parent.remove(g)); GL = [];
  if (!gv || !RIG) return;
- const mt = MAT.fabric(gv.c), ws = wr.getWorldScale(V(0,0,0)).x;
+ const mt = MAT.fabric(gv.c); man.updateMatrixWorld(true);
  ARMS.forEach(a => {
   if (!a.hand) return;
   const m0 = a.fingers.middle && a.fingers.middle[0], off = m0 && m0.parent == a.hand ? m0.position.clone() : V(0, 0, 0);
-  const hl = m0 ? lp(m0, invW()).distanceTo(lp(a.hand, invW())) : .08 / MS, bs = a.hand.getWorldScale(V(0,0,0)).x / ws || 1;
-  const o = new T.Mesh(new T.SphereGeometry(1, 14, 10), mt); o.scale.setScalar(hl * .85 / bs); o.position.copy(off.multiplyScalar(.5)); o.castShadow = true; a.hand.add(o); GL.push(o);
+  const hlw = m0 ? a.hand.getWorldPosition(V(0,0,0)).distanceTo(m0.getWorldPosition(V(0,0,0))) : .08 * HF, bs = a.hand.getWorldScale(V(0,0,0)).y || 1;
+  const o = new T.Mesh(new T.SphereGeometry(1, 14, 10), mt); o.scale.setScalar(cl(hlw * .85, .03 * HF, .06 * HF) / bs); o.position.copy(off.multiplyScalar(.5)); o.castShadow = true; a.hand.add(o); GL.push(o);
  });
 }
 function build() {
@@ -406,7 +415,7 @@ function build() {
 
 /* ---------- camera: orbit + pan + zoom toward the cursor ---------- */
 let yaw = 0, pitch = .05, dist = 3.7, ytg = null, auto = true, pan = false, lx = 0, ly = 0, pd0 = 0, zoomed = false; const tgt = V(0, .93, 0), ptr = new Map();
-function home() {const w = el.clientWidth || 1, h = el.clientHeight || 1; tgt.set(0, .93 * HF, 0); dist = (w / h < .8 ? 5.0 : 3.7) * HF; pitch = .05; zoomed = false}
+function home() {const w = el.clientWidth || 1, h = el.clientHeight || 1; tgt.set(0, .89 * HF, 0); dist = (w / h < .8 ? 5.0 : 3.7) * HF; pitch = .05; zoomed = false}
 function place() {const cp = Math.cos(pitch); cam.position.set(tgt.x + dist * Math.sin(yaw) * cp, tgt.y + dist * Math.sin(pitch), tgt.z + dist * Math.cos(yaw) * cp); cam.lookAt(tgt)}
 function rs() {const w = el.clientWidth, h = el.clientHeight; rd.setSize(w, h); cam.aspect = w / h; if (!zoomed) home(); cam.updateProjectionMatrix(); place()}
 function zoomAt(cx, cy, s) {   // keep the world point under the cursor fixed on screen while the distance changes
@@ -489,8 +498,8 @@ $('gm').onclick = () => pick('male'); $('gf').onclick = () => pick('female');
 let HS = 178, WT = 72;
 function apply() {
  HF = HS / 178; man.scale.setScalar(HF);                    // height only: uniform scale, so rigid gear is never warped
- BW = cl(Math.sqrt(WT / 72), .8, 1.4); BWm = BW / HF;       // weight only: thickness on x/z, independent of height
- cg.scale.set(BWm, 1, BWm);                                 // fabric carrier follows body thickness
+ BW = WT >= 72 ? 1 + .15 * (WT - 72) / 78 : 1 - .15 * (72 - WT) / 27; BWm = BW / HF;   // 45 kg = 0.85, 72 kg = 1.00, 150 kg = 1.15       // weight only: thickness on x/z, independent of height
+ gear.scale.setScalar(GS); cg.scale.set(BWm * GS, GS, BWm * GS);                                 // fabric carrier follows body thickness
  const inch = Math.round(HS / 2.54); $('hv').textContent = HS + " cm / " + Math.floor(inch / 12) + "\u2032" + (inch % 12) + "\u2033"; $('wv').textContent = WT + " kg / " + Math.round(WT * 2.2046) + " lb"; rs(); layout();
 }
 $('hs').oninput = e => {HS = +e.target.value; apply()}; $('ws').oninput = e => {WT = +e.target.value; apply()};
