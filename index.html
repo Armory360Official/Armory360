@@ -218,8 +218,8 @@ function slimMesh(mdl, bb, ct, sz, tw, td, mul) {
  const AR = /arm|hand|shoulder|clav|thumb|index|middle|ring|pinky|pinkie|little|finger/, HD = /head|neck/, ms = [];
  mdl.traverse(o => {if (o.isSkinnedMesh && o.geometry.attributes.skinIndex && o.skeleton) ms.push(o)});
  const info = ms.map(o => {
-  const g = o.geometry, n = g.attributes.position.count, si = g.attributes.skinIndex, sw = g.attributes.skinWeight, bn = o.skeleton.bones.map(b => strip(b.name)), k = new Float32Array(n);
-  for (let i = 0; i < n; i++) {let a = 0, h = 0; for (let j = 0; j < 4; j++) {const w = sw.getComponent(i, j), nm = bn[si.getComponent(i, j)] || ''; if (AR.test(nm)) a += w; else if (HD.test(nm)) h += w} k[i] = (1 - Math.min(a, 1)) * (1 - Math.min(h, 1))}
+  const g = o.geometry, n = g.attributes.position.count, si = g.attributes.skinIndex, sw = g.attributes.skinWeight, ws = sw.array instanceof Uint8Array ? 255 : sw.array instanceof Uint16Array ? 65535 : 1, bn = o.skeleton.bones.map(b => strip(b.name)), k = new Float32Array(n);
+  for (let i = 0; i < n; i++) {let a = 0, h = 0; for (let j = 0; j < 4; j++) {const w = sw.array[i * sw.itemSize + j] / ws, nm = bn[si.array[i * si.itemSize + j]] || ''; if (AR.test(nm)) a += w; else if (HD.test(nm)) h += w} k[i] = (1 - Math.min(a, 1)) * (1 - Math.min(h, 1))}
   return {o, k};
  });
  const v = V(0,0,0), X = [], Z = [], lo = bb.min.y + sz.y * .59, hi = bb.min.y + sz.y * .73;
@@ -274,7 +274,7 @@ function onModel(gltf) {
  });
  // real mesh bounds (skinned vertices included): uniform scale to TARGET_H keeps natural proportions, feet land on y = 0, body centered
  const bb = bounds(mdl, true), sz = bb.getSize(V(0,0,0)), ct = bb.getCenter(V(0,0,0));
- if (!bb.isEmpty() && sz.y > 1e-6) slimMesh(mdl, bb, ct, sz, SEX == 'female' ? .155 : .17, SEX == 'female' ? .115 : .125, +new URLSearchParams(location.search).get('slim') || 1);
+ if (!bb.isEmpty() && sz.y > 1e-6) try {slimMesh(mdl, bb, ct, sz, SEX == 'female' ? .155 : .17, SEX == 'female' ? .115 : .125, +new URLSearchParams(location.search).get('slim') || 1)} catch (err) {console.warn('Armory360: slimming skipped', err)}
  if (bb.isEmpty() || !(sz.y > 1e-6)) {console.warn('Armory360: could not measure model, using scale 1'); MS = 1}
  else {MS = TARGET_H / sz.y; mdl.position.x -= ct.x; mdl.position.z -= ct.z; mdl.position.y -= bb.min.y}
  console.log('Armory360 model size (units):', sz.x.toFixed(3), sz.y.toFixed(3), sz.z.toFixed(3), 'scale:', MS);
