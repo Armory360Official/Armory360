@@ -1,0 +1,383 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>Armory 360</title>
+<style>
+:root{--bg:#0b0d0a;--pn:#12150f;--pn2:#181c14;--ln:#262c20;--tx:#e8ebe2;--mu:#8a9481;--ac:#d4a63a;--ac2:#8f6f19;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:light){:root{--bg:#e8ebe0;--pn:#f5f6f0;--pn2:#fff;--ln:#cdd3c1;--tx:#1a2016;--mu:#5b6552;--ac:#8a6a12;--ac2:#b48a1c;color-scheme:light}}
+html,body{height:100%;margin:0}body{background:var(--bg);color:var(--tx);font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.app{display:grid;grid-template-columns:350px 1fr 340px;height:100%}
+.menu,.cart{background:var(--pn);display:flex;flex-direction:column;min-height:0}.menu{border-right:1px solid var(--ln)}.cart{border-left:1px solid var(--ln)}
+.brand{padding:16px 16px 12px;font-weight:800;letter-spacing:.2em;font-size:18px}.brand b{color:var(--ac)}.brand small{display:block;font-weight:500;letter-spacing:.05em;color:var(--mu);font-size:11px;margin-top:2px}
+.tabs{display:flex;gap:6px;padding:0 12px 12px;overflow-x:auto;border-bottom:1px solid var(--ln)}
+.tab{flex:none;background:transparent;color:var(--mu);border:1px solid var(--ln);border-radius:999px;padding:6px 12px;font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap}
+.tab.on{background:var(--ac);color:#111;border-color:var(--ac);font-weight:700}.tab i{display:inline-block;width:6px;height:6px;border-radius:50%;background:#6fbf4a;margin-left:6px;vertical-align:middle}
+.cards{flex:1;overflow:auto;padding:12px;display:grid;gap:10px;align-content:start}
+.card{display:flex;gap:10px;background:var(--pn2);border:1px solid var(--ln);border-radius:12px;padding:10px;transition:border-color .15s}.card:hover{border-color:var(--ac2)}.card.on{border-color:var(--ac);box-shadow:0 0 0 1px var(--ac) inset}
+.th{width:84px;height:84px;flex:none;border-radius:8px;background:#fff;overflow:hidden;display:flex;align-items:center;justify-content:center}.th img{width:100%;height:100%;object-fit:contain}
+.th span{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:26px;color:#ffffffc0}.th.sm{width:56px;height:56px}.th.sm span{font-size:18px}
+.ci{flex:1;min-width:0}.cn{font-weight:600;font-size:13px;line-height:1.3}.cp{color:var(--ac);font-weight:800;font-size:16px;margin:3px 0 6px}.ca{display:flex;gap:6px;flex-wrap:wrap}
+.b{border:1px solid var(--ln);background:transparent;color:var(--tx);padding:6px 10px;border-radius:8px;font-size:12px;cursor:pointer;text-decoration:none;display:inline-block;font-family:inherit}
+.b:hover{border-color:var(--ac)}.b.pri{background:var(--ac);color:#111;border-color:var(--ac);font-weight:700}.b.big{width:100%;text-align:center;padding:11px;font-size:14px;box-sizing:border-box}
+.note{color:var(--mu);font-size:11px;margin-top:8px}.note.pad{padding:10px 14px 14px;margin:0;border-top:1px solid var(--ln)}
+.stage{position:relative;min-height:0;background:radial-gradient(ellipse at 50% 55%,var(--pn),var(--bg) 72%)}
+#stage{position:absolute;inset:0 0 124px 0;cursor:grab;touch-action:pan-y}#stage:active{cursor:grabbing}#stage canvas{display:block}
+#status{position:absolute;top:12px;left:0;right:0;text-align:center;color:var(--mu);font-size:12px;pointer-events:none}
+.dock{position:absolute;left:0;right:0;bottom:0;padding:12px;display:flex;flex-direction:column;gap:8px;align-items:center}
+.views{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}.views button,.seg button{background:var(--pn);color:var(--tx);border:1px solid var(--ln);padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer}
+.views button.on,.seg button.on{border-color:var(--ac);color:var(--ac)}
+.bodyctl{display:flex;gap:16px;flex-wrap:wrap;align-items:center;justify-content:center;background:var(--pn);border:1px solid var(--ln);border-radius:12px;padding:8px 14px}
+.bodyctl label{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--mu)}.bodyctl label span{width:44px}.bodyctl input{width:150px;accent-color:var(--ac)}.bodyctl b{color:var(--tx);min-width:104px;font-weight:600}.seg{display:flex;gap:6px}
+.cart h2{margin:0;padding:16px 16px 10px;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--mu)}
+.lo{flex:1;overflow:auto;padding:0 12px 12px;display:grid;gap:8px;align-content:start}.row2{display:flex;gap:10px;background:var(--pn2);border:1px solid var(--ln);border-radius:10px;padding:8px}
+.tag{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--mu)}.ln{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px}.ln b{color:var(--ac);font-size:15px}
+.empty{color:var(--mu);font-size:13px;padding:18px 6px;text-align:center}
+.foot{border-top:1px solid var(--ln);padding:14px;display:grid;gap:8px}.tot{display:flex;justify-content:space-between;font-size:20px;font-weight:800}.tot span:first-child{font-size:13px;font-weight:500;color:var(--mu);align-self:center}
+.modal{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:9;padding:16px}
+.modal.on{display:flex}.box{background:var(--pn);border:1px solid var(--ln);border-radius:12px;max-width:520px;width:100%;max-height:86vh;overflow:auto;padding:16px}
+.box h2{margin:0 0 4px;font-size:17px}.box li{margin:7px 0}.box a{color:var(--ac)}.box ol{padding-left:20px}.row{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-top:8px}
+@media(max-width:900px){html,body{height:auto}.app{display:flex;flex-direction:column;height:auto}.stage{order:1;height:76vh;flex:none}.menu{order:2}.cart{order:3}
+ .menu,.cart{display:block;border:0;border-top:1px solid var(--ln)}.cards,.lo{overflow:visible}#stage{bottom:170px}.bodyctl input{width:110px}}
+</style></head><body>
+<div class="app">
+<aside class="menu"><div class="brand">ARMORY <b>360</b><small>Airsoft loadout planner · Evike.com gear</small></div>
+<div class="tabs" id="tabs"></div><div class="cards" id="cards"></div>
+<div class="note pad">Prices as last seen on Evike. Confirm size, color, stock and eye-protection rating on the product page, and follow your field's rules. Model: “Man – People” by Niki on Sketchfab (rigged and recolored).</div></aside>
+<main class="stage"><div id="stage"></div><div id="status">Loading 3D model…</div>
+<div class="dock"><div class="views" id="views"><button data-a="0">Front</button><button data-a="1.5708">Right</button><button data-a="3.1416">Back</button><button data-a="-1.5708">Left</button><button id="auto" class="on">Auto-rotate</button></div>
+<div class="bodyctl"><div class="seg"><button id="gm" class="on">Male</button><button id="gf" disabled title="Female model coming soon" style="opacity:.45;cursor:not-allowed">Female (soon)</button></div>
+<label><span>Height</span><input type="range" id="hs" min="150" max="205" value="178"><b id="hv"></b></label>
+<label><span>Weight</span><input type="range" id="ws" min="45" max="150" value="72"><b id="wv"></b></label></div></div></main>
+<aside class="cart"><h2>Your Evike Loadout</h2><div class="lo" id="lo"></div>
+<div class="foot"><div class="tot"><span id="cnt">0 items</span><span id="tot">$0.00</span></div>
+<button class="b pri big" id="co">Checkout on Evike.com</button><button class="b big" id="clr">Clear loadout</button></div></aside></div>
+<div class="modal" id="md"><div class="box"><h2>Your Evike order list</h2><div class="note" style="margin:0 0 8px">Each link opens that exact item on Evike.com. Add them to your cart there.</div><ol id="ol"></ol><div class="row"><button class="b pri" id="all">Open all on Evike</button><button class="b" id="cp">Copy list</button><button class="b" id="x">Close</button></div><div class="note" id="mm">If your browser blocks pop-ups, allow them for this page or open items one at a time.</div></div></div>
+<script id="mdl">const MODEL_B64="";</script>
+<script id="images">
+const IMGS={};
+</script>
+<script>
+const LIBS = ['https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
+              'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js'];
+(function chain(i){
+ if (i >= LIBS.length) return main();
+ const s = document.createElement('script'); s.src = LIBS[i]; s.onload = () => chain(i + 1);
+ s.onerror = () => { document.getElementById('status').textContent = 'Could not load ' + LIBS[i]; };
+ document.head.appendChild(s);
+})(0);
+
+function main() {
+const CFG = { base: 'https://www.evike.com/products/', affiliate: '' };
+const D = [
+{k:'helmet',l:'Helmet',i:[
+   {id:45747,n:'Matrix Basic PJ Type Tactical Airsoft Bump Helmet (Black)',p:40,c:0x1a1a1a,img:'e'},
+   {id:45749,n:'Matrix Basic PJ Type Bump Helmet (Foliage Green)',p:40,c:0x4a5a36},
+   {id:116108,n:'Matrix Vented High Cut Airsoft Helmet',p:62,c:0x6b5f45}]},
+{k:'eyes',l:'Eye & Face Protection',i:[
+   {id:35748,n:'Matrix Wide View Goggles (Black / Smoke Lens)',p:25,c:0x1a1a1a},
+   {id:62888,n:'Matrix Full Seal Goggles w/ Face Shield (Dark Earth)',p:16,c:0x8a7550,f:1}]},
+{k:'carrier',l:'Plate Carrier',i:[
+   {id:101761,n:'Matrix Lightweight Plate Carrier (Coyote Brown)',p:89,c:0x7a6244},
+   {id:34669,n:'Evike.com Laser Cut BAMF Skull Alpha High Speed Plate Carrier (Black)',p:59.95,c:0x1c1c1c,img:'d'}]},
+{k:'gloves',l:'Gloves',i:[
+   {id:49301,n:'Matrix Sentinel Hard Knuckle Tactical Gloves (Black / Medium)',p:19.95,c:0x1a1a1a},
+   {id:114185,n:'Matrix Nexus Tactical Gloves (Evike.com Black / Small)',p:14.95,c:0x222222,img:'c'}]},
+{k:'rifle',l:'Primary Replica (AEG)',i:[
+   {id:90434,n:'Specna Arms FLEX M4 AEG w/ GATE X-ASR MOSFET, M4 CQB Suppressed (Black, Gun Only)',p:189,c:0x1e1e1e,s:1,pdw:1,img:'b'},
+   {id:90436,n:'Specna Arms FLEX M4 AEG w/ GATE X-ASR MOSFET, M4 PDW Keymod (Black, Gun Only)',p:189,c:0x1e1e1e,pdw:1,img:'a'}]}];
+const S = {};
+const $ = s => document.getElementById(s), f$ = n => '$' + n.toFixed(2), hex = n => '#' + n.toString(16).padStart(6, '0');
+
+/* ---------- scene ---------- */
+const T = THREE, el = $('stage'), sc = new T.Scene(), cam = new T.PerspectiveCamera(32, 1, .1, 50);
+const rd = new T.WebGLRenderer({antialias:true,alpha:true}); rd.shadowMap.enabled = true; rd.shadowMap.type = T.PCFSoftShadowMap; rd.setPixelRatio(Math.min(devicePixelRatio, 2)); el.appendChild(rd.domElement);
+sc.add(new T.HemisphereLight(0xffffff, 0x39402f, .5));
+const d1 = new T.DirectionalLight(0xfff4e6, 1.0); d1.position.set(2, 4, 3); d1.castShadow = true; d1.shadow.mapSize.set(2048, 2048); Object.assign(d1.shadow.camera, {left:-1.6,right:1.6,top:2.6,bottom:-.6,near:.5,far:12}); d1.shadow.bias = -.0006; d1.shadow.normalBias = .02; sc.add(d1);
+const d2 = new T.DirectionalLight(0xdadde0, .5); d2.position.set(-3, 2.5, -3); sc.add(d2);
+const d3 = new T.DirectionalLight(0xdfe8ff, .3); d3.position.set(-4, 1.5, 3); sc.add(d3);
+{const pm = new T.PMREMGenerator(rd), es = new T.Scene(); es.background = new T.Color(0x14171a);
+ const bx = (w,h,d,x,y,z,v) => {const o = new T.Mesh(new T.BoxGeometry(w,h,d), new T.MeshBasicMaterial({color:new T.Color(v,v,v)})); o.position.set(x,y,z); o.lookAt(0,0,0); es.add(o)};
+ bx(4,3,.1,3,4,4,1); bx(2,4,.1,-5,2,2,.55); bx(6,.1,2,0,5,-1,.8); bx(.3,4,.1,-3,2,-5,.9); bx(8,.1,8,0,-2,0,.18);
+ sc.environment = pm.fromScene(es, .03).texture}
+
+const man = new T.Group(); sc.add(man);
+const V = (x, y, z) => new T.Vector3(x, y, z);
+const M = (c, r=.75, m=.05) => new T.MeshStandardMaterial({color:c, roughness:r, metalness:m});
+const mkTex = (draw, rep) => {const c = document.createElement('canvas'); c.width = c.height = 64; draw(c.getContext('2d')); const t = new T.CanvasTexture(c); t.wrapS = t.wrapT = T.RepeatWrapping; t.repeat.set(rep, rep); t.anisotropy = 4; return t};
+const TXW = mkTex(x => {x.fillStyle='#c8c8c8'; x.fillRect(0,0,64,64); for(let i=0;i<64;i+=4)for(let j=0;j<64;j+=4){x.fillStyle=((i+j)/4)%2?'#f2f2f2':'#c4c4c4'; x.fillRect(i,j,4,4); x.fillStyle='#8c8c8c'; x.fillRect(i,j,4,1); x.fillRect(i,j,1,4)}}, 4);
+const TXP = mkTex(x => {x.fillStyle='#dcdcdc'; x.fillRect(0,0,64,64); for(let n=0;n<700;n++){const v=150+Math.random()*105|0; x.fillStyle='rgb('+v+','+v+','+v+')'; x.fillRect(Math.random()*64, Math.random()*64, 1.5, 1.5)}}, 6);
+const TXG = mkTex(x => {x.fillStyle='#e6e6e6'; x.fillRect(0,0,64,64); for(let n=0;n<900;n++){const v=190+Math.random()*65|0; x.fillStyle='rgb('+v+','+v+','+v+')'; x.fillRect(Math.random()*64, Math.random()*64, 1, 1)}}, 10);
+const MAT = {
+ fabric: c => new T.MeshStandardMaterial({color:c, roughness:.96, metalness:0, map:TXW, bumpMap:TXW, bumpScale:1.2, envMapIntensity:.5}),
+ poly: c => new T.MeshStandardMaterial({color:c, roughness:.5, metalness:.05, map:TXP, bumpMap:TXP, bumpScale:.6, envMapIntensity:.9}),
+ gun: c => new T.MeshStandardMaterial({color:c, roughness:.5, metalness:.55, envMapIntensity:.45})};
+const mk = (g, m, x, y, z, p=man) => {const o = new T.Mesh(g, m); o.position.set(x, y, z); o.castShadow = o.receiveShadow = true; p.add(o); return o};
+const C = (a, b, h, s=20) => new T.CylinderGeometry(a, b, h, s), B = (x, y, z) => new T.BoxGeometry(x, y, z);
+
+// base platform + soft shadow
+mk(C(.42, .44, .025, 56), M(0x1b1e19, .35, .6), 0, -.0125, 0); const ring = mk(new T.TorusGeometry(.4, .006, 8, 64), M(0xc8a24a, .4, .7), 0, .002, 0); ring.rotation.x = Math.PI / 2;
+const fl = new T.Mesh(new T.PlaneGeometry(8, 8), new T.ShadowMaterial({opacity:.35})); fl.rotation.x = -Math.PI / 2; fl.position.y = .003; fl.receiveShadow = true; sc.add(fl);
+{const cs = document.createElement('canvas'); cs.width = cs.height = 128; const x = cs.getContext('2d'), g = x.createRadialGradient(64, 64, 6, 64, 64, 64); g.addColorStop(0, 'rgba(0,0,0,.5)'); g.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = g; x.fillRect(0, 0, 128, 128);
+const bl = new T.Mesh(new T.PlaneGeometry(1.7, 1.7), new T.MeshBasicMaterial({map:new T.CanvasTexture(cs), transparent:true, depthWrite:false})); bl.rotation.x = -Math.PI / 2; bl.position.y = .001; sc.add(bl)}
+
+/* ---------- GLB human (generic rigged or static model) ---------- */
+const wr = new T.Group(); man.add(wr);          // wrapper: carries model scale + body width
+let BODY = null, MS = 1, FEM = false, GW = 1, HF = 1, RIG = null, ARMS = [];
+const TARGET_H = 1.86, SCALE_TWEAK = 1;                            // nudge if your model comes out a bit tall/short
+const gear = new T.Group(), cg = new T.Group(); man.add(gear, cg);
+let RG = null, HZ = 0;
+const FN = ['thumb','index','middle','ring','pinky'];
+
+function parseBone(raw) {
+ const n = raw.replace(/^mixamorig:?/i, '').toLowerCase();
+ const side = /left|[_.]l$|^l[_.]/.test(n) ? 1 : /right|[_.]r$|^r[_.]/.test(n) ? -1 : 0;
+ if (!side) return null;
+ const fn = FN.find(f => n.includes(f));
+ if (fn) return {side, fn, d:+((n.match(/(\d)$/) || [0,0])[1])};
+ if (/forearm|lowerarm/.test(n)) return {side, part:'lo'};
+ if (/hand/.test(n) && !/end/.test(n)) return {side, part:'hand'};
+ if (/arm/.test(n) && !/twist|roll|fore|lower/.test(n)) return {side, part:'up'};
+ return null;
+}
+function clearModel() {while (wr.children.length) wr.remove(wr.children[0]); ARMS = []; RIG = null; BODY = null}
+function onModel(gltf) {
+ clearModel();
+ const mdl = gltf.scene; mdl.updateMatrixWorld(true);
+ let skinned = false, minY = Infinity, maxY = -Infinity, topEnd = false; const bp = V(0,0,0), ar = {1:{fingers:{}}, '-1':{fingers:{}}};
+ mdl.traverse(o => {
+  if (o.isMesh) {
+   o.castShadow = o.receiveShadow = true; o.frustumCulled = false; if (o.isSkinnedMesh) skinned = true;
+   if (o.geometry.attributes._glove && o.geometry.attributes.color) {
+    BODY = o; const g = o.geometry, ca = g.attributes.color, ga = g.attributes._glove, n = ca.count, f = new Float32Array(n * 3), q = new Float32Array(n), sc = ca.array instanceof Uint8Array ? 255 : 1, gs = ga.array instanceof Uint8Array ? 255 : 1;
+    for (let i = 0; i < n; i++) {f[i*3] = ca.array[i*ca.itemSize] / sc; f[i*3+1] = ca.array[i*ca.itemSize+1] / sc; f[i*3+2] = ca.array[i*ca.itemSize+2] / sc; q[i] = ga.array[i] / gs}
+    g.setAttribute('color', new T.BufferAttribute(f, 3)); g.userData.base = f.slice(); g.userData.mask = q;
+   }
+   (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => {
+    if (m.envMapIntensity !== undefined) m.envMapIntensity = .45;
+    if (m.metalness !== undefined) m.metalness = Math.min(m.metalness, .1);
+    if (m.roughness !== undefined) m.roughness = Math.max(m.roughness, .5);
+    if (!m.map && !m.vertexColors && m.color && Math.min(m.color.r, m.color.g, m.color.b) > .9) m.color.set(0xb98568);   // untextured white -> skin tone
+    m.needsUpdate = true;
+   });
+  }
+  if (o.isBone) {
+   o.userData.rq = o.quaternion.clone(); o.getWorldPosition(bp); minY = Math.min(minY, bp.y); maxY = Math.max(maxY, bp.y);
+   if (/headtop/i.test(o.name)) topEnd = true;
+   const p = parseBone(o.name);
+   if (p) {const a = ar[p.side]; if (p.fn) (a.fingers[p.fn] = a.fingers[p.fn] || []).push({b:o, d:p.d}); else a[p.part] = o}
+  }
+ });
+ let height;
+ if (skinned && isFinite(minY) && maxY - minY > 1e-6) {height = (maxY - minY) * (topEnd ? 1 : 1.08); mdl.position.y = -minY}
+ else {const box = new T.Box3().setFromObject(mdl); height = box.getSize(V(0,0,0)).y; mdl.position.y = -box.min.y}
+ MS = TARGET_H * SCALE_TWEAK / height;
+ ARMS = [-1, 1].map(s => {const a = ar[s], f = {}; for (const k in a.fingers) f[k] = a.fingers[k].sort((p, q) => p.d - q.d).map(x => x.b); return {s, up:a.up, lo:a.lo, hand:a.hand, fingers:f, glp:[]}});
+ console.log('Armory360 model height (units):', height, 'scale:', MS, 'rigged arms:', ARMS.map(a => !!(a.up && a.lo && a.hand)));
+ wr.add(mdl); RIG = mdl; $('status').textContent = ''; apply(); build();
+}
+const gltfLoader = new T.GLTFLoader();
+function b64buf(s) {const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u.buffer}
+gltfLoader.parse(b64buf(MODEL_B64), '', onModel, err => {$('status').textContent = 'Could not read the built-in model.'; console.error(err)});
+
+const Qa = new T.Quaternion(), Qb = new T.Quaternion(), Qc = new T.Quaternion();
+function lp(b, inv) { return b.getWorldPosition(V(0,0,0)).applyMatrix4(inv) }
+function aimBone(b, child, dir) {
+ wr.updateMatrixWorld(true);
+ const inv = new T.Matrix4().copy(wr.matrixWorld).invert(), cur = lp(child, inv).sub(lp(b, inv)).normalize();
+ const wq = wr.getWorldQuaternion(Qa).clone(), wqi = wq.clone().invert();
+ const bw = wqi.clone().multiply(b.getWorldQuaternion(Qb)), pw = wqi.clone().multiply(b.parent.getWorldQuaternion(Qc));
+ const dq = new T.Quaternion().setFromUnitVectors(cur, dir.clone().normalize());
+ const res = pw.invert().multiply(dq.multiply(bw));
+ if ([res.x, res.y, res.z, res.w].every(isFinite)) b.quaternion.copy(res);
+}
+const AX = [V(1,0,0), V(0,1,0), V(0,0,1)];
+function curl(a, target) {   // curl each finger toward the grip point, picking the bend axis/direction that gets closest
+ for (const fn in a.fingers) {
+  const ch = a.fingers[fn], tipB = ch[ch.length - 1], k = fn == 'thumb' ? .6 : 1;
+  for (let j = 0; j < Math.min(3, ch.length - 1); j++) {
+   const b = ch[j], rq = b.userData.rq, ang = [1.0, 1.2, .9][j] * k; let best = rq.clone(), bd = Infinity;
+   for (const ax of AX) for (const sg of [-1, 1]) {
+    b.quaternion.copy(rq).multiply(new T.Quaternion().setFromAxisAngle(ax, sg * ang)); wr.updateMatrixWorld(true);
+    const inv = new T.Matrix4().copy(wr.matrixWorld).invert(), d = lp(tipB, inv).distanceTo(target);
+    if (d < bd) {bd = d; best = b.quaternion.clone()}
+   }
+   b.quaternion.copy(best); wr.updateMatrixWorld(true);
+  }
+ }
+}
+function pose(tg, grip) {
+ if (!RIG || !ARMS.some(a => a.up && a.lo && a.hand)) return;
+ wr.scale.setScalar(MS); wr.updateMatrixWorld(true);
+ const tl = v => V(v.x / MS, v.y / MS, v.z / MS);
+ ARMS.forEach((a, i) => {
+  if (!a.up || !a.lo || !a.hand) return;
+  for (const fn in a.fingers) a.fingers[fn].forEach(b => b.quaternion.copy(b.userData.rq));
+  wr.updateMatrixWorld(true);
+  const inv = new T.Matrix4().copy(wr.matrixWorld).invert();
+  const S0 = lp(a.up, inv), E0 = lp(a.lo, inv), H0 = lp(a.hand, inv), L1 = S0.distanceTo(E0), L2 = E0.distanceTo(H0);
+  const P = tl(tg[i]), m0 = a.fingers.middle && a.fingers.middle[0], po = m0 ? lp(m0, inv).distanceTo(H0) * .7 : 0;
+  const H = P.clone().sub(P.clone().sub(S0).normalize().multiplyScalar(po));      // wrist sits a palm-length short of the grip point
+  const v = H.clone().sub(S0); let d = v.length(); const u = v.clone().normalize();
+  if (d > L1 + L2 - .005 / MS) {d = L1 + L2 - .005 / MS; H.copy(S0).add(u.clone().multiplyScalar(d))}
+  const ad = (L1*L1 - L2*L2 + d*d) / (2*d), h = Math.sqrt(Math.max(L1*L1 - ad*ad, 0));
+  const pv = V(a.s * .6, -1, -.35), n = pv.sub(u.clone().multiplyScalar(pv.dot(u))).normalize();
+  const E = S0.clone().add(u.clone().multiplyScalar(ad)).add(n.multiplyScalar(h));
+  aimBone(a.up, a.lo, E.clone().sub(S0));
+  wr.updateMatrixWorld(true);
+  const inv2 = new T.Matrix4().copy(wr.matrixWorld).invert(), E2 = lp(a.lo, inv2);
+  aimBone(a.lo, a.hand, H.clone().sub(E2));
+  wr.updateMatrixWorld(true);
+  if (grip) curl(a, tl(grip[i]));
+ });
+}
+function layout() {
+ let P = [V(-.318, .85, .03), V(.318, .85, .03)], G = null;
+ if (RG) {
+  const k = .78 / HF, d = V(.12, -.06, .99).normalize(); RG.scale.setScalar(k); RG.quaternion.setFromUnitVectors(V(0, 0, 1), d);
+  RG.position.copy(V(-.1 * GW, 1.47, .13 * GW)).add(d.clone().multiplyScalar(.375 * k));
+  const Lc = (x, y, z) => V(x, y, z).multiplyScalar(k).applyQuaternion(RG.quaternion).add(RG.position);
+  P = [Lc(-.03, -.09, -.105), Lc(.04, -.012, HZ - .06)];      // palm centers: beside the pistol grip / under the handguard
+  G = [Lc(.012, -.09, -.105), Lc(-.012, -.015, HZ - .06)];    // points the fingers wrap toward
+ }
+ pose(P, G);
+ wr.scale.setScalar(MS);
+}
+
+/* ---------- gear ---------- */
+function setGlove(gv) {   // gloves are painted onto the hand/wrist vertices, so they bend with the skeleton
+ if (!BODY) return; const g = BODY.geometry, col = g.attributes.color, base = g.userData.base, mk2 = g.userData.mask; if (!col || !base) return;
+ const gc = gv ? new T.Color(gv.c) : null, dk = gv && gv.id == 49301 ? .85 : 1;
+ for (let i = 0; i < mk2.length; i++) {
+  const m = gc ? mk2[i] : 0;
+  col.array[i*3]   = base[i*3]   * (1 - m) + (gc ? gc.r * dk : 0) * m;
+  col.array[i*3+1] = base[i*3+1] * (1 - m) + (gc ? gc.g * dk : 0) * m;
+  col.array[i*3+2] = base[i*3+2] * (1 - m) + (gc ? gc.b * dk : 0) * m;
+ }
+ col.needsUpdate = true;
+}
+function build() {
+ for (const g of [gear, cg]) while (g.children.length) g.remove(g.children.at(0));
+ const it = k => {const d = D.find(x => x.k == k); return S[k] != null ? d.i.at(S[k]) : null};
+ let h = it('helmet'); if (h) {
+  const dk = MAT.poly(0x0b0b0b), rl = MAT.poly(h.c), dm = MAT.poly(h.c), hel = new T.Group(); dm.side = T.DoubleSide; hel.matrixAutoUpdate = false; hel.matrix.set(1,0,0,0,0,1,.6,0,0,0,1,0,0,0,0,1); gear.add(hel);
+  const c0 = V(0, 1.752, -.005), rr = V(.118, .13, .135);
+  const dome = new T.Mesh(new T.SphereGeometry(1, 44, 28, 0, 6.283, 0, 1.95), dm); dome.scale.set(rr.x, rr.y, rr.z); dome.position.copy(c0); dome.castShadow = true; hel.add(dome);
+  const on = (a, b, o) => {const x = rr.x*Math.sin(a)*Math.sin(b), y = rr.y*Math.cos(a), z = rr.z*Math.sin(a)*Math.cos(b), n = V(x/(rr.x*rr.x), y/(rr.y*rr.y), z/(rr.z*rr.z)).normalize(); return {p:V(x, y, z).add(c0).add(n.clone().multiplyScalar(o)), n}};
+  const ft = (g, mt, a, b, o) => {const res = on(a, b, o), m2 = mk(g, mt, res.p.x, res.p.y, res.p.z, hel); m2.quaternion.setFromUnitVectors(V(0, 0, 1), res.n); return m2};
+  ft(B(.056, .05, .014), rl, .82, 0, .004); ft(B(.034, .034, .004), dk, .82, 0, .012); ft(B(.07, .05, .004), dk, .9, Math.PI, .002);
+  for (const q of [-1, 1]) {
+   ft(new T.SphereGeometry(.014, 10, 8), dk, .42, q * .55, .001).scale.set(1.4, 1, .25); ft(B(.06, .07, .004), dk, .72, q * 1.15, .002);
+   const r = ft(B(.09, .05, .014), rl, 1.38, q * 1.5, .006); for (let k = -1; k <= 1; k++) mk(B(.012, .034, .004), dk, k * .026, 0, .008, r);
+   const cv = new T.CatmullRomCurve3([V(q * .118, 1.71, .005), V(q * .1, 1.655, .05), V(q * .05, 1.618, .088), V(0, 1.612, .092)]); mk(new T.TubeGeometry(cv, 16, .004, 6), dk, 0, 0, 0, gear);
+  }
+  const vz = mk(B(.14, .004, .05), dm, 0, 1.7, .15, hel); vz.rotation.x = -.25; mk(B(.02, .016, .012), dk, .09, 1.64, .06, gear);
+ }
+ let e = it('eyes'); if (e) {
+  const m = MAT.poly(e.c), l = M(0x15181a, .1, .3);
+  const t = mk(new T.TorusGeometry(.118, .014, 8, 28), m, 0, 1.745, 0, gear); t.rotation.x = Math.PI / 2; t.scale.set(1, 1.1, 1);
+  mk(B(.2, .065, .05), m, 0, 1.745, .125, gear); mk(B(.17, .048, .012), l, 0, 1.745, .152, gear);
+  if (e.f) mk(B(.19, .09, .05), m, 0, 1.665, .118, gear);
+ }
+ let c = it('carrier'); if (c) {
+  const m = MAT.fabric(c.c), p = MAT.fabric(c.c), bk = MAT.poly(0x151515), dk = MAT.fabric(0x060606), md = m.clone(); md.side = T.DoubleSide; p.color.multiplyScalar(.7);
+  const pl = (zc, sg) => {const g = new T.BoxGeometry(.33, .4, .045, 12, 10, 1), P = g.attributes.position; for (let i = 0; i < P.count; i++) {const x = P.getX(i), y = P.getY(i); P.setX(i, x * (1 - .1 * (y + .2) / .4)); P.setZ(i, P.getZ(i) - sg * 1.7 * Math.pow(x, 2) * Math.pow(1 - .1 * (y + .2) / .4, 2))} g.computeVertexNormals(); mk(g, m, 0, 1.3, zc, cg)};
+  pl(.128, 1); pl(-.128, -1);
+  const arc = (y, h) => {for (const q of [-1, 1]) {const a = new T.Mesh(new T.CylinderGeometry(.182, .182, h, 24, 1, true, q > 0 ? 1.0 : -2.14, 1.14), md); a.scale.z = .62; a.position.y = y; a.castShadow = true; cg.add(a)}};
+  for (const q of [-1, 1]) {
+   const cv = new T.CatmullRomCurve3([V(q * .1, 1.47, .12), V(q * .105, 1.56, .085), V(q * .112, 1.602, 0), V(q * .105, 1.56, -.085), V(q * .1, 1.47, -.12)]);
+   mk(new T.TubeGeometry(cv, 28, .02, 10), m, 0, 0, 0, cg); mk(new T.TorusGeometry(.012, .0035, 6, 12), dk, q * .108, 1.628, .03, cg);
+  }
+  if (c.id == 34669) {
+   for (let r = 0; r < 7; r++) for (let k = -2; k <= 2; k++) {const x = k * .058; mk(B(.046, .006, .002), dk, x, 1.14 + r * .04, .1515 - 1.7 * Math.pow(x, 2), cg)}
+   mk(B(.12, .07, .005), dk, 0, 1.44, .152, cg); mk(B(.05, .014, .003), M(0x6a6d6a, .4, .5), 0, 1.445, .155, cg);
+   arc(1.24, .035); arc(1.13, .035); for (const q of [-1, 1]) for (const y of [1.24, 1.13]) mk(B(.02, .032, .03), bk, q * .188, y, .045, cg);
+  } else {
+   const cb = mk(C(.172, .172, .13, 32), m, 0, 1.07, 0, cg); cb.scale.z = .64; arc(1.2, .2);
+   for (let i = -1; i <= 1; i++) mk(B(.085, .12, .05), p, i * .095, 1.18, .168, cg); mk(B(.1, .07, .03), p, 0, 1.37, .158, cg);
+  }
+ }
+ setGlove(it('gloves'));
+ const r = it('rifle'); RG = null;
+ if (r) {
+  const m = MAT.gun(0x303234), b = MAT.gun(0x1c1d1f), rg = new T.Group(); gear.add(rg); const pd = !!r.pdw, hl = pd ? .2 : .3, hz = pd ? .26 : .3;
+  mk(B(.05, .085, .3), m, 0, 0, 0, rg);
+  mk(C(.033, .033, hl), m, 0, .005, hz, rg).rotation.x = Math.PI / 2;
+  mk(C(.009, .009, .14), b, 0, .005, pd ? .42 : .52, rg).rotation.x = Math.PI / 2;
+  if (r.s) {mk(C(.03, .03, .26, 20), b, 0, .005, .49, rg).rotation.x = Math.PI / 2; mk(C(.031, .031, .03, 20), M(0xff6a1a, .5, 0), 0, .005, .62, rg).rotation.x = Math.PI / 2} else mk(C(.018, .018, pd ? .065 : .05), pd ? M(0xff6a1a, .5, 0) : b, 0, .005, pd ? .46 : .6, rg).rotation.x = Math.PI / 2;
+  mk(B(.028, .014, pd ? .46 : .56), b, 0, .045, pd ? .1 : .15, rg);
+  mk(B(.03, .02, .03), b, 0, .062, -.1, rg); for (const q of [-1, 1]) mk(B(.006, .03, .012), b, q * .01, .087, -.1, rg);
+  const fz = hz + hl / 2 - .03; mk(B(.03, .02, .026), b, 0, .062, fz, rg); mk(B(.005, .035, .005), b, 0, .0895, fz, rg);
+  mk(C(.022, .022, .14, 12), b, 0, 0, -.2, rg).rotation.x = Math.PI / 2;
+  {const sh = new T.Shape(); sh.moveTo(.19, .05); sh.lineTo(.385, .05); sh.lineTo(.385, -.1); sh.lineTo(.19, -.03); sh.lineTo(.19, .05); const ho = new T.Path(); ho.absarc(.305, -.01, .022, 0, 6.283, true); sh.holes.push(ho);
+   const sg = new T.ExtrudeGeometry(sh, {depth:.036, bevelEnabled:true, bevelSize:.005, bevelThickness:.005, bevelSegments:2, curveSegments:20}); sg.translate(0, 0, -.018); sg.rotateY(Math.PI / 2); mk(sg, m, 0, 0, 0, rg)}
+  mk(B(.03, .085, .042), b, 0, -.088, -.105, rg).rotation.x = .3;
+  mk(B(.006, .006, .085), b, 0, -.1, -.04, rg); mk(B(.006, .05, .006), b, 0, -.075, .0, rg); mk(B(.007, .028, .012), b, 0, -.065, -.035, rg).rotation.x = .3;
+  mk(B(.034, .17, .065), b, 0, -.135, .04, rg).rotation.x = -.22;
+  if (pd) {mk(B(.032, .02, .05), b, 0, .067, .06, rg); mk(C(.026, .026, .075, 16), b, 0, .098, .06, rg).rotation.x = Math.PI / 2; mk(C(.021, .021, .008, 14), M(0x6fa0c8, .1, .3), 0, .098, .1, rg).rotation.x = Math.PI / 2}
+  RG = rg; HZ = hz;
+ }
+ layout();
+}
+
+/* ---------- camera / interaction ---------- */
+let ang = 0, tg = null, auto = true, drag = false, lx = 0;
+function rs() {const w = el.clientWidth, h = el.clientHeight; rd.setSize(w, h); cam.aspect = w / h; const z = (w / h < .8 ? 5.0 : 3.7) * HF; cam.position.set(0, .95 * HF, z); cam.lookAt(0, .93 * HF, 0); cam.updateProjectionMatrix()}
+addEventListener('resize', rs); rs();
+el.addEventListener('pointerdown', e => {drag = true; lx = e.clientX; tg = null; el.setPointerCapture(e.pointerId)});
+el.addEventListener('pointermove', e => {if (drag) {ang += (e.clientX - lx) * .01; lx = e.clientX}});
+const up = () => {drag = false}; el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+$('auto').onclick = () => {auto = !auto; tg = null; $('auto').classList.toggle('on', auto)};
+$('views').querySelectorAll('[data-a]').forEach(b => b.onclick = () => {auto = false; $('auto').classList.remove('on'); const a = +b.dataset.a; ang = Math.atan2(Math.sin(ang), Math.cos(ang)); tg = a});
+(function loop() {
+ requestAnimationFrame(loop);
+ if (!drag) {if (tg !== null) {let d = tg - ang; d = Math.atan2(Math.sin(d), Math.cos(d)); ang += d * .12; if (Math.abs(d) < .002) tg = null} else if (auto) ang += .006}
+ man.rotation.y = ang; rd.render(sc, cam);
+})();
+
+/* ---------- menu / loadout UI ---------- */
+const buyUrl = x => x.url || CFG.base + x.id + '/' + (CFG.affiliate ? '?' + CFG.affiliate : '');
+let TAB = D.at(0).k;
+const picked = () => D.filter(d => S[d.k] != null).map(d => d.i.at(S[d.k]));
+const thumb = (x, d) => x.img && IMGS[x.img] ? '<img src="' + IMGS[x.img] + '" alt="">' : '<span style="background:' + hex(x.c) + '">' + d.l.charAt(0) + '</span>';
+function renderMenu() {
+ $('tabs').innerHTML = D.map(d => '<button class="tab' + (d.k == TAB ? ' on' : '') + '" data-t="' + d.k + '">' + d.l + (S[d.k] != null ? '<i></i>' : '') + '</button>').join('');
+ const d = D.find(x => x.k == TAB);
+ $('cards').innerHTML = d.i.map((x, j) => {
+  const on = S[d.k] === j;
+  return '<div class="card' + (on ? ' on' : '') + '"><div class="th">' + thumb(x, d) + '</div><div class="ci"><div class="cn">' + x.n + '</div><div class="cp">' + f$(x.p) + '</div><div class="ca">' +
+   '<button class="b' + (on ? '' : ' pri') + '" data-k="' + d.k + '" data-j="' + j + '">' + (on ? 'Remove' : 'Equip') + '</button>' +
+   '<a class="b" href="' + buyUrl(x) + '" target="_blank" rel="noopener">See on Evike ↗</a></div></div></div>';
+ }).join('');
+}
+function renderLoadout() {
+ const p = picked();
+ $('lo').innerHTML = p.length ? D.filter(d => S[d.k] != null).map(d => {const x = d.i.at(S[d.k]);
+  return '<div class="row2"><div class="th sm">' + thumb(x, d) + '</div><div class="ci"><div class="tag">' + d.l + '</div><div class="cn">' + x.n + '</div><div class="ln"><b>' + f$(x.p) + '</b><a class="b pri" href="' + buyUrl(x) + '" target="_blank" rel="noopener">Buy on Evike ↗</a></div></div></div>'}).join('')
+  : '<div class="empty">Nothing equipped yet. Pick gear from the menu on the left.</div>';
+ $('cnt').textContent = p.length + (p.length == 1 ? ' item' : ' items'); $('tot').textContent = f$(p.reduce((a, x) => a + x.p, 0));
+}
+function change() {renderMenu(); renderLoadout(); build()}
+$('tabs').onclick = e => {const b = e.target.closest('[data-t]'); if (b) {TAB = b.dataset.t; renderMenu()}};
+$('cards').onclick = e => {const b = e.target.closest('[data-k]'); if (!b) return; const k = b.dataset.k, j = +b.dataset.j; if (S[k] === j) delete S[k]; else S[k] = j; change()};
+$('clr').onclick = () => {for (const k in S) delete S[k]; change()};
+$('co').onclick = () => {
+ const p = picked(); if (!p.length) {alert('Equip at least one item first.'); return}
+ $('ol').innerHTML = p.map(x => '<li><a href="' + buyUrl(x) + '" target="_blank" rel="noopener">' + x.n + '</a> — ' + f$(x.p) + '</li>').join(''); $('md').classList.add('on');
+};
+$('x').onclick = () => $('md').classList.remove('on');
+$('all').onclick = () => picked().forEach(x => window.open(buyUrl(x), '_blank', 'noopener'));
+$('cp').onclick = async () => {const t = picked().map(x => x.n + ' - ' + f$(x.p) + ' - ' + buyUrl(x)).join('\n'); try {await navigator.clipboard.writeText(t); $('mm').textContent = 'Copied to clipboard.'} catch (e) {$('mm').textContent = 'Copy failed. Select the links above instead.'}};
+
+/* ---------- body sliders ---------- */
+let HS = 178, WT = 72;
+function apply() {
+ const m = HS / 100, bmi = WT / (m * m), cl = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+ HF = HS / 178; man.scale.setScalar(HF);
+ // body shape: fat, lean, muscle and skeletal frame are separate morph targets on the figure (nothing is just stretched)
+ const mf = cl((bmi - 22.7) / 10, 0, 1), ms = cl((21.5 - bmi) / 4, 0, 1), mm = cl((bmi - 22.7) / 6, 0, .7) * (1 - mf * .5), fr = cl(cl((bmi - 22.7) / 10, -1, 1) + (HS - 178) / 54, -1, 1.2);
+ if (BODY && BODY.morphTargetInfluences) {const dc = BODY.morphTargetDictionary || {}, I = BODY.morphTargetInfluences; I[dc.Heavy ?? 0] = mf; I[dc.Slim ?? 1] = ms; I[dc.Muscle ?? 2] = mm; I[dc.Frame ?? 3] = fr}
+ GW = cl(1 + (bmi - 22.7) * .012, .92, 1.25);       // only the fabric plate carrier is sized to the build; rigid gear never scales
+ cg.scale.set(GW, 1, GW);
+ const inch = Math.round(HS / 2.54); $('hv').textContent = HS + " cm / " + Math.floor(inch / 12) + "\u2032" + (inch % 12) + "\u2033"; $('wv').textContent = WT + " kg / " + Math.round(WT * 2.2046) + " lb"; rs(); layout();
+}
+$('hs').oninput = e => {HS = +e.target.value; apply()}; $('ws').oninput = e => {WT = +e.target.value; apply()};
+apply(); change();
+}
+</script></body></html>
