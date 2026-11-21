@@ -37,8 +37,8 @@ html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--tx);f
 @media(max-width:900px){html,body{height:auto}.app{display:flex;flex-direction:column;height:auto}.stage{order:1;height:76vh;flex:none}.menu{order:2}.cart{order:3}
  .menu,.cart{display:block;border:0;border-top:1px solid var(--ln)}.cards,.lo{overflow:visible}#stage{bottom:170px}.bodyctl input{width:110px}}
 #planner,#loadout,#how,#gear{scroll-margin-top:64px}
-.hero{background:linear-gradient(120deg,var(--pn2),var(--bg));border-bottom:1px solid var(--ln)}.hero>div{padding-top:44px;padding-bottom:40px}
-.hero h1{font-size:clamp(28px,4.4vw,48px);line-height:1.1;margin:0 0 10px}.hero h1 b{color:var(--ac)}.hero p{color:var(--mu);max-width:560px;margin:0 0 20px;font-size:16px}
+.hero{background:linear-gradient(120deg,var(--pn2),var(--bg));border-bottom:1px solid var(--ln)}.hero>div{padding-top:44px;padding-bottom:40px;text-align:center}
+.hero h1{font-size:clamp(28px,4.4vw,48px);line-height:1.1;margin:0 0 10px}.hero h1 b{color:var(--ac)}.hero p{color:var(--mu);max-width:560px;margin:0 auto 20px;font-size:16px}
 .sec{font-size:20px;margin:30px 0 14px;letter-spacing:.02em}
 .tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
 .tile{display:flex;flex-direction:column;gap:6px;background:var(--pn2);border:1px solid var(--ln);border-radius:12px;padding:12px;color:var(--tx);text-decoration:none;font-size:13px}.tile:hover{border-color:var(--ac)}.tile .th{width:100%;height:110px}.tile small{color:var(--mu)}
@@ -175,8 +175,8 @@ const bl = new T.Mesh(new T.PlaneGeometry(1.7, 1.7), new T.MeshBasicMaterial({ma
 // Height: man.scale (uniform HF). Weight: BW = body thickness (x/z only). BWm = BW / HF cancels the height scale on x/z,
 // so the height slider never changes width and the weight slider never changes height.
 const wr = new T.Group(); man.add(wr);
-let MS = 1, HF = 1, BW = 1, BWm = 1, ARMS = [], GL = [], RIG = null, HDY = 0, CDY = 0, RG = null, HZ = 0, SEX = 'male', LT = 0;
-const TARGET_H = 1.78, GS = TARGET_H / 1.86, POSE_ARMS = false, HINT = 'Scroll to zoom at the cursor · drag to orbit · right-drag or Shift-drag to pan';
+let MS = 1, HF = 1, BW = 1, BWm = 1, FIT = 1, ARMS = [], GL = [], RIG = null, HDY = 0, CDY = 0, RG = null, HZ = 0, SEX = 'male', LT = 0;
+const TARGET_H = 1.78, GS = TARGET_H / 1.86, POSE_ARMS = /[?&]pose=1/.test(location.search), HINT = 'Scroll to zoom at the cursor · drag to orbit · right-drag or Shift-drag to pan';
 const gear = new T.Group(), cg = new T.Group(); man.add(gear, cg);
 const FN = ['thumb','index','middle','ring','pinky'];
 
@@ -219,6 +219,7 @@ function onModel(gltf) {
  mdl.traverse(o => {
   if (o.isMesh) {
    o.castShadow = o.receiveShadow = true; o.frustumCulled = false;
+   if (o.morphTargetInfluences && o.morphTargetInfluences.length) {console.log('Armory360 morph targets on', o.name, o.morphTargetDictionary, Array.from(o.morphTargetInfluences)); o.morphTargetInfluences.fill(0)}
    (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => {
     if (m.envMapIntensity !== undefined) m.envMapIntensity = .45;
     if (m.metalness !== undefined) m.metalness = Math.min(m.metalness, .1);
@@ -240,6 +241,10 @@ function onModel(gltf) {
  if (bb.isEmpty() || !(sz.y > 1e-6)) {console.warn('Armory360: could not measure model, using scale 1'); MS = 1}
  else {MS = TARGET_H / sz.y; mdl.position.x -= ct.x; mdl.position.z -= ct.z; mdl.position.y -= bb.min.y}
  console.log('Armory360 model size (units):', sz.x.toFixed(3), sz.y.toFixed(3), sz.z.toFixed(3), 'scale:', MS);
+ // a T-pose arm span should be about the body height; if the model is wider than that, slim x/z (arms, shoulders, torso, legs) to fit
+ const fq = new URLSearchParams(location.search).get('fit'), span = sz.x / (sz.y || 1);
+ FIT = fq ? cl(+fq || 1, .4, 1.2) : span > 1.08 ? cl(1 / span, .55, 1) : 1;
+ console.log('Armory360 arm span / height:', span.toFixed(2), '-> width fit', FIT.toFixed(2), '(try ?fit=0.8 in the URL to override)');
  ARMS = [-1, 1].map(s => {const a = ar[s], f = {}; for (const k in a.fingers) f[k] = a.fingers[k].sort((p, q) => p.d - q.d).map(x => x.b); return {s, up:a.up, lo:a.lo, hand:a.hand, fingers:f}});
  const armsOk = ARMS.some(a => a.up && a.lo && a.hand);
  const rows = bones.map(b => {
@@ -302,7 +307,7 @@ function pose(tg, grip) {
  if (!tg || !RIG || !ARMS.some(a => a.up && a.lo && a.hand)) return;
  wr.scale.setScalar(MS); man.updateMatrixWorld(true); wr.updateMatrixWorld(true);
  // IK runs with the body at uniform scale; targets are mapped into that space, then the width scale is applied afterwards
- const tl = v => V(v.x / (MS * BWm), v.y / MS, v.z / (MS * BWm));
+ const tl = v => V(v.x / (MS * BWm * FIT), v.y / MS, v.z / (MS * BWm * FIT));
  ARMS.forEach((a, i) => {
   if (!a.up || !a.lo || !a.hand || !tg[i]) return;
   for (const fn in a.fingers) a.fingers[fn].forEach(b => b.quaternion.copy(b.userData.rq));
@@ -333,7 +338,7 @@ function layout() {
    if (POSE_ARMS) pose([Lc(-.03, -.09, -.105), Lc(.04, -.012, HZ - .06)].map(p => p.multiplyScalar(GS)), [Lc(.012, -.09, -.105), Lc(-.012, -.015, HZ - .06)].map(p => p.multiplyScalar(GS))); else restPose();
   } else restPose();   // no rifle: arms and fingers stay in the model's T-pose
  } catch (err) {console.warn('Armory360 pose skipped:', err)}
- wr.scale.set(MS * BWm, MS, MS * BWm);   // always applied, so height/weight keep working even if posing fails
+ wr.scale.set(MS * BWm * FIT, MS, MS * BWm * FIT);   // always applied, so height/weight keep working even if posing fails
 }
 
 /* ---------- gear ---------- */
