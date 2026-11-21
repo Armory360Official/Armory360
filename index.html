@@ -61,7 +61,7 @@ html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--tx);f
 .vals b{display:block;font:600 36px/1.05 "Barlow Condensed","Arial Narrow",Impact,sans-serif;text-transform:uppercase}.vals span{font:400 19px/1.3 "Barlow Condensed","Arial Narrow",sans-serif}
 .sf{background:linear-gradient(#232822,#0b0d0a);color:#e8ebe2;padding:30px 0 22px;font-size:14px}.sf>div{display:grid;grid-template-columns:1fr 1fr 1fr 1.8fr;gap:28px}
 .sf h3{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:#9aa391;margin:0 0 12px;font-weight:600}.sf a{display:block;color:#e8ebe2;text-decoration:none;margin:0 0 10px}.sf a:hover{color:var(--ac)}.sf p{margin:0 0 10px;color:#c5cabb}
-.sf small{display:block;font-size:11px;line-height:1.5;color:#8a9481}
+.sf .cr a{display:inline;margin:0;color:var(--ac);text-decoration:underline}.sf small{display:block;font-size:11px;line-height:1.5;color:#8a9481}
 .sf .base{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;border-top:1px solid #2c322a;padding-top:16px;color:#8a9481;font-size:12px}.sf .base .wm{font-size:28px;color:#e8ebe2;margin:0}
 @media(max-width:900px){.vals>div{grid-template-columns:1fr 1fr}.mast>div{flex-wrap:wrap;gap:12px}.sr{order:5;flex-basis:100%;max-width:none}.mi{display:none}.sf>div{grid-template-columns:1fr 1fr}.sf .base{grid-column:1/-1}.tl{display:none}.app{height:auto}}
 </style></head><body id="top">
@@ -80,7 +80,7 @@ html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--tx);f
 <div class="app">
 <aside class="menu">
 <div class="tabs" id="tabs"></div><div class="cards" id="cards"></div>
-<div class="note pad">Prices as last seen on Evike. Confirm size, color, stock and eye-protection rating on the product page, and follow your field's rules. 3D model credits: see credits page.</div></aside>
+<div class="note pad">Prices as last seen on Evike. Confirm size, color, stock and eye-protection rating on the product page, and follow your field's rules.</div></aside>
 <main class="stage"><div id="stage"></div><div id="status">Loading 3D model…</div>
 <div class="dock"><div class="views" id="views"><button data-a="0">Front</button><button data-a="1.5708">Right</button><button data-a="3.1416">Back</button><button data-a="-1.5708">Left</button><button id="auto" class="on">Auto-rotate</button><button id="rv">Reset view</button></div>
 <div class="bodyctl"><div class="seg"><button id="gm" class="on">Male</button><button id="gf">Female</button></div>
@@ -95,7 +95,7 @@ html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--tx);f
 <section><h3>Resources</h3><a href="https://www.evike.com/" target="_blank" rel="noopener">Evike.com ↗</a><a href="https://www.evike.com/" target="_blank" rel="noopener">Store Locations ↗</a><p>Questions about an order go to Evike.com.</p></section>
 <section><h3>About Armory 360</h3><p>Armory 360 is an independent airsoft loadout planner. Pick gear, preview it on a 3D player and send your list to Evike.com to buy.</p>
 <small>Armory 360 is not operated by Evike.com. Prices, specs and stock are as last seen and may change, so confirm everything on the product page. Purchases are completed on Evike.com, and Armory 360 may earn a commission on qualifying orders. Follow local laws and your field's rules, and always wear rated eye protection. Product names and brands belong to their respective owners.</small></section>
-<div class="base"><a class="wm" href="#top">ARMORY<span>360</span></a><span>3D model credits: see credits page · © 2026 Armory 360</span></div></div></footer>
+<div class="base"><a class="wm" href="#top">ARMORY<span>360</span></a><span class="cr">3D Models: <a href="https://skfb.ly" target="_blank" rel="noopener">"Basic Human Male"</a> &amp; <a href="https://skfb.ly" target="_blank" rel="noopener">"Basic Human Female"</a> by DNC44 (modified), licensed under <a href="https://creativecommons.org" target="_blank" rel="noopener">CC BY 4.0</a>.</span><span>© 2026 Armory 360</span></div></div></footer>
 <div class="modal" id="md"><div class="box"><h2>Your Evike order list</h2><div class="note" style="margin:0 0 8px">Each link opens that exact item on Evike.com. Add them to your cart there.</div><ol id="ol"></ol><div class="row"><button class="b pri" id="all">Open all on Evike</button><button class="b" id="cp">Copy list</button><button class="b" id="x">Close</button></div><div class="note" id="mm">If your browser blocks pop-ups, allow them for this page or open items one at a time.</div></div></div>
 <script id="images">
 const IMGS={};
@@ -130,6 +130,14 @@ const D = [
    {id:90434,n:'Specna Arms FLEX M4 AEG w/ GATE X-ASR MOSFET, M4 CQB Suppressed (Black, Gun Only)',p:189,c:0x1e1e1e,s:1,pdw:1,img:'b'},
    {id:90436,n:'Specna Arms FLEX M4 AEG w/ GATE X-ASR MOSFET, M4 PDW Keymod (Black, Gun Only)',p:189,c:0x1e1e1e,pdw:1,img:'a'}]}];
 const S = {};
+async function loadCatalog() {   // optional ./catalog.json: same shape as D (array, or {categories:[...]}); colors may be "#rrggbb"
+ try {
+  const r = await fetch('./catalog.json', {cache:'no-cache'}); if (!r.ok) return;
+  const j = await r.json(), a = Array.isArray(j) ? j : j.categories;
+  const ok = (a || []).filter(d => d && d.k && d.l && Array.isArray(d.i)).map(d => ({k:String(d.k), l:String(d.l), i:d.i.filter(x => x && x.n && isFinite(+x.p) && (x.id || x.url)).map(x => ({...x, p:+x.p, c:typeof x.c == 'string' ? (parseInt(x.c.replace('#', ''), 16) || 0x333333) : (x.c ?? 0x333333)}))})).filter(d => d.i.length);
+  if (ok.length) {D.splice(0, D.length, ...ok); TAB = D[0].k}
+ } catch (e) {console.warn('catalog.json not used, keeping built-in gear', e)}
+}
 const $ = s => document.getElementById(s), f$ = n => '$' + n.toFixed(2), hex = n => '#' + n.toString(16).padStart(6, '0'), cl = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
 /* ---------- scene ---------- */
@@ -172,15 +180,16 @@ const TARGET_H = 1.86, HINT = 'Scroll to zoom at the cursor · drag to orbit · 
 const gear = new T.Group(), cg = new T.Group(); man.add(gear, cg);
 const FN = ['thumb','index','middle','ring','pinky'];
 
+const strip = raw => raw.replace(/^.*[|:]/, '').replace(/\.\d{3}$/, '').toLowerCase();   // drop "Armature|" / "mixamorig:" prefixes and Blender ".001" suffixes
 function parseBone(raw) {
- const n = raw.replace(/^mixamorig:?/i, '').toLowerCase();
- const side = /left|[_.]l$|^l[_.]/.test(n) ? 1 : /right|[_.]r$|^r[_.]/.test(n) ? -1 : 0;
+ const n = strip(raw).replace(/^mixamorig/, '');
+ const side = /left/.test(n) ? 1 : /right/.test(n) ? -1 : /(^|[_.\-\s])l\d*($|[_.\-\s])/.test(n) ? 1 : /(^|[_.\-\s])r\d*($|[_.\-\s])/.test(n) ? -1 : 0;
  if (!side) return null;
- const fn = FN.find(f => n.includes(f));
- if (fn) return {side, fn, d:+((n.match(/(\d)$/) || [0,0])[1])};
- if (/forearm|lowerarm/.test(n)) return {side, part:'lo'};
- if (/hand/.test(n) && !/end/.test(n)) return {side, part:'hand'};
- if (/arm/.test(n) && !/twist|roll|fore|lower/.test(n)) return {side, part:'up'};
+ const fn = FN.find(f => n.includes(f)) || (/pinkie|little/.test(n) ? 'pinky' : null);
+ if (fn) {const m = n.match(/(\d+)(?=[^\d]*$)/); return {side, fn, d:m ? +m[1] : 0}}
+ if (/forearm|lowerarm|lower_arm|arm_?lower|elbow/.test(n)) return {side, part:'lo'};
+ if (/hand/.test(n) && !/end|top/.test(n)) return {side, part:'hand'};
+ if (/arm/.test(n) && !/twist|roll|fore|lower|clav|shoulder/.test(n)) return {side, part:'up'};
  return null;
 }
 function dummy() {   // simple stand-in until the .glb files exist
@@ -190,13 +199,22 @@ function dummy() {   // simple stand-in until the .glb files exist
  return g;
 }
 function clearModel() {while (wr.children.length) wr.remove(wr.children[0]); ARMS = []; GL = []; RIG = null}
+function bounds(root) {
+ root.updateMatrixWorld(true); const box = new T.Box3(), v = V(0,0,0);
+ root.traverse(o => {
+  if (!o.isMesh || !o.geometry.attributes.position) return;
+  const pos = o.geometry.attributes.position, sk = o.isSkinnedMesh && typeof o.boneTransform == 'function' && o.geometry.attributes.skinIndex, step = Math.max(1, Math.floor(pos.count / 20000));
+  for (let i = 0; i < pos.count; i += step) {if (sk) {v.set(0,0,0); o.boneTransform(i, v)} else v.fromBufferAttribute(pos, i); box.expandByPoint(v.applyMatrix4(o.matrixWorld))}
+ });
+ return box;
+}
 function onModel(gltf) {
  clearModel();
  const mdl = gltf.scene; mdl.updateMatrixWorld(true);
- let skinned = false, minY = Infinity, maxY = -Infinity, head = null, top = null; const bp = V(0,0,0), ar = {1:{fingers:{}}, '-1':{fingers:{}}};
+ let head = null, top = null; const names = [], ar = {1:{fingers:{}}, '-1':{fingers:{}}};
  mdl.traverse(o => {
   if (o.isMesh) {
-   o.castShadow = o.receiveShadow = true; o.frustumCulled = false; if (o.isSkinnedMesh) skinned = true;
+   o.castShadow = o.receiveShadow = true; o.frustumCulled = false;
    (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => {
     if (m.envMapIntensity !== undefined) m.envMapIntensity = .45;
     if (m.metalness !== undefined) m.metalness = Math.min(m.metalness, .1);
@@ -206,28 +224,32 @@ function onModel(gltf) {
    });
   }
   if (o.isBone) {
-   o.userData.rq = o.quaternion.clone(); o.getWorldPosition(bp); minY = Math.min(minY, bp.y); maxY = Math.max(maxY, bp.y);
-   const n = o.name.replace(/^mixamorig:?/i, '').toLowerCase();
-   if (/headtop/.test(n)) top = o; else if (/(^|[_.:])head$/.test(n)) head = o;
+   o.userData.rq = o.quaternion.clone(); names.push(o.name);
+   const n = strip(o.name);
+   if (/head.?top|head_?end/.test(n)) top = o; else if (/(^|[_.\-])head$/.test(n)) head = o;
    const p = parseBone(o.name);
    if (p) {const a = ar[p.side]; if (p.fn) (a.fingers[p.fn] = a.fingers[p.fn] || []).push({b:o, d:p.d}); else a[p.part] = o}
   }
  });
- let height;
- if (skinned && isFinite(minY) && maxY - minY > 1e-6) {height = (maxY - minY) * (top ? 1 : 1.08); mdl.position.y = -minY}
- else {const box = new T.Box3().setFromObject(mdl); height = box.getSize(V(0,0,0)).y; mdl.position.y = -box.min.y}
- MS = TARGET_H / height;
+ // real mesh bounds (skinned vertices included): uniform scale to TARGET_H keeps natural proportions, feet land on y = 0, body centered
+ const bb = bounds(mdl), sz = bb.getSize(V(0,0,0)), ct = bb.getCenter(V(0,0,0));
+ if (bb.isEmpty() || !(sz.y > 1e-6)) {console.warn('Armory360: could not measure model, using scale 1'); MS = 1}
+ else {MS = TARGET_H / sz.y; mdl.position.x -= ct.x; mdl.position.z -= ct.z; mdl.position.y -= bb.min.y}
+ console.log('Armory360 model size (units):', sz.x.toFixed(3), sz.y.toFixed(3), sz.z.toFixed(3), 'scale:', MS);
  ARMS = [-1, 1].map(s => {const a = ar[s], f = {}; for (const k in a.fingers) f[k] = a.fingers[k].sort((p, q) => p.d - q.d).map(x => x.b); return {s, up:a.up, lo:a.lo, hand:a.hand, fingers:f}});
+ const armsOk = ARMS.some(a => a.up && a.lo && a.hand);
+ console.log('Armory360 bones (' + names.length + '):', names.join(', '));
+ console.log('Armory360 arm mapping:', ARMS.map(a => ({side:a.s, up:a.up && a.up.name, lo:a.lo && a.lo.name, hand:a.hand && a.hand.name, fingers:Object.fromEntries(Object.entries(a.fingers).map(([k, v]) => [k, v.map(b => b.name)]))})));
  wr.add(mdl); RIG = mdl; wr.scale.setScalar(MS); man.updateMatrixWorld(true);
  // gear anchors follow the skeleton: helmet/goggles to the head bones, carrier + rifle to the shoulder line
  const ml = b => man.worldToLocal(b.getWorldPosition(V(0,0,0)));
- HDY = head ? cl((top ? ml(top).y - .11 : ml(head).y + .1) - 1.752, -.1, .1) : 0;
+ HDY = top ? cl(ml(top).y - .11 - 1.752, -.1, .1) : 0;
  const sy = ARMS.filter(a => a.up).map(a => ml(a.up).y); CDY = sy.length ? cl(sy.reduce((x, y) => x + y) / sy.length - 1.5, -.08, .08) : 0;
- $('status').textContent = HINT; apply(); build();
+ $('status').textContent = armsOk || names.length == 0 ? HINT : 'Arm bones not recognised, rifle grip pose disabled (see console for bone names)'; apply(); build();
 }
 const gltfLoader = new T.GLTFLoader();
 function loadModel(sex) {
- const t = ++LT, url = './' + sex + '.glb'; SEX = sex; $('status').textContent = 'Loading 3D model…';
+ const t = ++LT, url = './basic_human_' + sex + '.glb'; SEX = sex; $('status').textContent = 'Loading 3D model…';
  gltfLoader.load(url, g => {if (t == LT) onModel(g)}, undefined, () => {if (t != LT) return; onModel({scene:dummy()}); $('status').textContent = url + ' not found, showing placeholder'});
 }
 
@@ -263,13 +285,17 @@ function curl(a, tgt) {
   set(th, tb.ax, tb.sg, 1, TA);
  }
 }
+function restPose() {   // back to the model's own T-pose
+ ARMS.forEach(a => [a.up, a.lo, a.hand, ...Object.values(a.fingers).flat()].forEach(b => b && b.userData.rq && b.quaternion.copy(b.userData.rq)));
+ wr.updateMatrixWorld(true);
+}
 function pose(tg, grip) {
- if (!RIG || !ARMS.some(a => a.up && a.lo && a.hand)) return;
+ if (!tg || !RIG || !ARMS.some(a => a.up && a.lo && a.hand)) return;
  wr.scale.setScalar(MS); man.updateMatrixWorld(true); wr.updateMatrixWorld(true);
  // IK runs with the body at uniform scale; targets are mapped into that space, then the width scale is applied afterwards
  const tl = v => V(v.x / (MS * BWm), v.y / MS, v.z / (MS * BWm));
  ARMS.forEach((a, i) => {
-  if (!a.up || !a.lo || !a.hand) return;
+  if (!a.up || !a.lo || !a.hand || !tg[i]) return;
   for (const fn in a.fingers) a.fingers[fn].forEach(b => b.quaternion.copy(b.userData.rq));
   wr.updateMatrixWorld(true);
   const inv = invW();
@@ -285,20 +311,20 @@ function pose(tg, grip) {
   wr.updateMatrixWorld(true);
   aimBone(a.lo, a.hand, H.clone().sub(lp(a.lo, invW())));
   wr.updateMatrixWorld(true);
-  if (grip) curl(a, tl(grip[i]));
+  if (grip && grip[i]) curl(a, tl(grip[i]));
  });
 }
 function layout() {
- let P = [V(-.318, 1.0 + CDY, .03), V(.318, 1.0 + CDY, .03)], G = null;
- if (RG) {
-  const k = .78 / HF, d = V(.12, -.06, .99).normalize(); RG.scale.setScalar(k); RG.quaternion.setFromUnitVectors(V(0, 0, 1), d);
-  RG.position.copy(V(-.1 * BWm, 1.47 + CDY, .13 * BWm)).add(d.clone().multiplyScalar(.375 * k));
-  const Lc = (x, y, z) => V(x, y, z).multiplyScalar(k).applyQuaternion(RG.quaternion).add(RG.position);
-  P = [Lc(-.03, -.09, -.105), Lc(.04, -.012, HZ - .06)];
-  G = [Lc(.012, -.09, -.105), Lc(-.012, -.015, HZ - .06)];
-  pose(P, G);
- } else pose(null, null);
- wr.scale.set(MS * BWm, MS, MS * BWm);
+ wr.scale.setScalar(MS); man.updateMatrixWorld(true);
+ try {
+  if (RG) {
+   const k = .78 / HF, d = V(.12, -.06, .99).normalize(); RG.scale.setScalar(k); RG.quaternion.setFromUnitVectors(V(0, 0, 1), d);
+   RG.position.copy(V(-.1 * BWm, 1.47 + CDY, .13 * BWm)).add(d.clone().multiplyScalar(.375 * k));
+   const Lc = (x, y, z) => V(x, y, z).multiplyScalar(k).applyQuaternion(RG.quaternion).add(RG.position);
+   pose([Lc(-.03, -.09, -.105), Lc(.04, -.012, HZ - .06)], [Lc(.012, -.09, -.105), Lc(-.012, -.015, HZ - .06)]);
+  } else restPose();   // no rifle: arms and fingers stay in the model's T-pose
+ } catch (err) {console.warn('Armory360 pose skipped:', err)}
+ wr.scale.set(MS * BWm, MS, MS * BWm);   // always applied, so height/weight keep working even if posing fails
 }
 
 /* ---------- gear ---------- */
@@ -420,7 +446,7 @@ $('rv').onclick = () => {home(); ytg = 0; place()};
 const buyUrl = x => x.url || CFG.base + x.id + '/' + (CFG.affiliate ? '?' + CFG.affiliate : '');
 let TAB = D.at(0).k, Q = '';
 const picked = () => D.filter(d => S[d.k] != null).map(d => d.i.at(S[d.k]));
-const thumb = (x, d) => x.img && IMGS[x.img] ? '<img src="' + IMGS[x.img] + '" alt="">' : '<span style="background:' + hex(x.c) + '">' + d.l.charAt(0) + '</span>';
+const thumb = (x, d) => x.image ? '<img src="' + x.image + '" alt="">' : x.img && IMGS[x.img] ? '<img src="' + IMGS[x.img] + '" alt="">' : '<span style="background:' + hex(x.c) + '">' + d.l.charAt(0) + '</span>';
 function renderMenu() {
  $('tabs').innerHTML = D.map(d => '<button class="tab' + (d.k == TAB && !Q ? ' on' : '') + '" data-t="' + d.k + '">' + d.l + (S[d.k] != null ? '<i></i>' : '') + '</button>').join('');
  const L = D.flatMap(d => (Q || d.k == TAB ? d.i : []).map((x, j) => ({d, x, j})).filter(o => !Q || o.x.n.toLowerCase().includes(Q)));
@@ -468,6 +494,6 @@ function apply() {
  const inch = Math.round(HS / 2.54); $('hv').textContent = HS + " cm / " + Math.floor(inch / 12) + "\u2032" + (inch % 12) + "\u2033"; $('wv').textContent = WT + " kg / " + Math.round(WT * 2.2046) + " lb"; rs(); layout();
 }
 $('hs').oninput = e => {HS = +e.target.value; apply()}; $('ws').oninput = e => {WT = +e.target.value; apply()};
-renderTiles(); apply(); change(); loadModel('male');
+loadCatalog().then(() => {renderTiles(); apply(); change(); loadModel('male')});
 }
 </script></body></html>
