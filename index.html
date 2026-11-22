@@ -1,8 +1,11 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>Armory 360</title>
+<script>try{var t=localStorage.getItem('a360theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&display=swap">
 <style>
 :root{--bg:#0b0d0a;--pn:#12150f;--pn2:#181c14;--ln:#262c20;--tx:#e8ebe2;--mu:#8a9481;--ac:#d4a63a;--ac2:#8f6f19;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media(prefers-color-scheme:light){:root{--bg:#e8ebe0;--pn:#f5f6f0;--pn2:#fff;--ln:#cdd3c1;--tx:#1a2016;--mu:#5b6552;--ac:#8a6a12;--ac2:#b48a1c;color-scheme:light}}
+@media(prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#e8ebe0;--pn:#f5f6f0;--pn2:#fff;--ln:#cdd3c1;--tx:#1a2016;--mu:#5b6552;--ac:#8a6a12;--ac2:#b48a1c;color-scheme:light}}
+:root[data-theme="light"]{--bg:#e8ebe0;--pn:#f5f6f0;--pn2:#fff;--ln:#cdd3c1;--tx:#1a2016;--mu:#5b6552;--ac:#8a6a12;--ac2:#b48a1c;color-scheme:light}
+:root[data-theme="dark"]{--bg:#0b0d0a;--pn:#12150f;--pn2:#181c14;--ln:#262c20;--tx:#e8ebe2;--mu:#8a9481;--ac:#d4a63a;--ac2:#8f6f19;color-scheme:dark}
 html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 .app{display:grid;grid-template-columns:350px 1fr 340px;height:clamp(640px,calc(100vh - 170px),860px);border:1px solid var(--ln);border-radius:14px;overflow:hidden;background:var(--pn)}
 .menu,.cart{background:var(--pn);display:flex;flex-direction:column;min-height:0}.menu{border-right:1px solid var(--ln)}.cart{border-left:1px solid var(--ln)}
@@ -36,7 +39,7 @@ html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--tx);f
 .box h2{margin:0 0 4px;font-size:17px}.box li{margin:7px 0}.box a{color:var(--ac)}.box ol{padding-left:20px}.row{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-top:8px}
 @media(max-width:900px){html,body{height:auto}.app{display:flex;flex-direction:column;height:auto}.stage{order:1;height:76vh;flex:none}.menu{order:2}.cart{order:3}
  .menu,.cart{display:block;border:0;border-top:1px solid var(--ln)}.cards,.lo{overflow:visible}#stage{bottom:170px}.bodyctl input{width:110px}}
-#planner,#loadout,#how,#gear{scroll-margin-top:64px}
+#planner,#loadout,#how,#gear,#contact{scroll-margin-top:64px}
 .hero{background:linear-gradient(120deg,var(--pn2),var(--bg));border-bottom:1px solid var(--ln)}.hero>div{padding-top:44px;padding-bottom:40px;text-align:center}
 .hero h1{font-size:clamp(28px,4.4vw,48px);line-height:1.1;margin:0 0 10px}.hero h1 b{color:var(--ac)}.hero p{color:var(--mu);max-width:560px;margin:0 auto 20px;font-size:16px}
 .sec{font-size:20px;margin:30px 0 14px;letter-spacing:.02em}
@@ -54,7 +57,7 @@ html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--tx);f
 .na{background:var(--ac);color:#111;font-weight:800;font-size:12px;line-height:1.2;text-align:center;padding:9px 12px;text-decoration:none;border-radius:2px;letter-spacing:.04em}
 .mi{font-size:13px;line-height:1.35;color:var(--tx);text-decoration:none;white-space:nowrap}.mi b{display:block;font-weight:600}.mi span{font-weight:700}
 .cartic{position:relative;color:var(--ac);display:flex;margin-left:auto}.cartic em{position:absolute;top:-7px;right:-9px;font-style:normal;background:var(--tx);color:#111;border-radius:50%;min-width:18px;height:18px;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center}
-.mainnav{background:#0b0d0a;position:sticky;top:0;z-index:20}.mainnav>div{max-width:1480px;margin:0 auto;display:flex;overflow-x:auto}
+.mainnav{background:#0b0d0a;position:sticky;top:0;z-index:20}.mainnav>div{max-width:1480px;margin:0 auto;display:flex;flex-wrap:wrap;position:relative}
 .mainnav a{padding:14px 18px;color:#e8ebe2;text-decoration:none;font:700 17px/1 "Barlow Condensed","Arial Narrow",Impact,sans-serif;letter-spacing:.02em;white-space:nowrap}.mainnav a:hover{color:var(--ac)}
 .mainnav a.g{background:var(--ac);color:#111}.mainnav a.g:hover{color:#111;filter:brightness(1.1)}.gr{display:flex;background:#3a4033}.gr a:hover{color:#fff}.cats{display:flex}
 .vals{background:#0b0d0a;color:#e8ebe2;text-align:center;margin-top:44px}.vals>div{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding-top:24px;padding-bottom:24px}
@@ -64,6 +67,24 @@ html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--tx);f
 .sf .cr a{display:inline;margin:0;color:var(--ac);text-decoration:underline}.sf small{display:block;font-size:11px;line-height:1.5;color:#8a9481}
 .sf .base{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;border-top:1px solid #2c322a;padding-top:16px;color:#8a9481;font-size:12px}.sf .base .wm{font-size:28px;color:#e8ebe2;margin:0}
 @media(max-width:900px){.vals>div{grid-template-columns:1fr 1fr}.mast>div{flex-wrap:wrap;gap:12px}.sr{order:5;flex-basis:100%;max-width:none}.mi{display:none}.sf>div{grid-template-columns:1fr 1fr}.sf .base{grid-column:1/-1}.tl{display:none}.app{height:auto}}
+.cu{background:var(--pn);border-top:1px solid var(--ln)}.cu>div{max-width:760px;margin:0 auto;padding:40px 20px;box-sizing:border-box}
+.cu h2{font:800 34px/1.1 "Barlow Condensed","Arial Narrow",Impact,sans-serif;text-transform:uppercase;margin:0 0 8px}.cu p{color:var(--mu);margin:0 0 20px;font-size:15px}
+.cu form{display:grid;gap:14px}.cu label{display:grid;gap:6px;font-size:13px;font-weight:600}.cr2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.cu input,.cu textarea{width:100%;box-sizing:border-box;background:var(--pn2);color:var(--tx);border:1px solid var(--ln);border-radius:6px;padding:12px 14px;font:inherit;font-size:15px;font-weight:400}.cu textarea{resize:vertical;min-height:130px}
+.cu input:focus,.cu textarea:focus{outline:2px solid var(--ac);outline-offset:-1px}.cu input.bad,.cu textarea.bad{border-color:#d4553a}
+.cb{display:flex;align-items:center;gap:14px;flex-wrap:wrap}#cx{font-size:13px;color:var(--mu)}#cx.ok{color:#6fbf4a}#cx.err{color:#e0735c}
+@media(max-width:600px){.cr2{grid-template-columns:1fr}}
+.tg{position:absolute;top:12px;right:12px;z-index:5;background:var(--pn);color:var(--tx);border:1px solid var(--ln);border-radius:999px;padding:7px 14px;font:600 12px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;cursor:pointer}.tg:hover{border-color:var(--ac)}
+.dm{position:relative}.dt,.st{background:none;border:0;color:#e8ebe2;cursor:pointer;font:700 17px/1 "Barlow Condensed","Arial Narrow",Impact,sans-serif;letter-spacing:.02em;padding:14px 18px;white-space:nowrap}
+.dt i,.st i{font-style:normal;font-size:12px;margin-left:4px}.dt:hover,.dm.open>.dt,.st:hover,.sm.open>.st{color:var(--ac)}
+.dp{display:none;position:absolute;left:0;top:100%;min-width:250px;background:#12150f;border:1px solid #2c322a;border-top:2px solid var(--ac);box-shadow:0 14px 30px #000b;z-index:30}
+.dm.open>.dp{display:block}.sm{position:relative}.st{display:flex;justify-content:space-between;width:100%;box-sizing:border-box;text-align:left;font:600 15px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:0;padding:12px 16px}
+.sp{display:none;position:absolute;left:100%;top:-2px;background:#12150f;border:1px solid #2c322a;border-top:2px solid var(--ac);box-shadow:0 14px 30px #000b;width:max-content;max-width:min(860px,72vw);max-height:72vh;overflow:auto;padding:6px}
+.sm.open>.sp{display:grid;grid-template-columns:repeat(3,minmax(190px,1fr))}
+@media(hover:hover){.dm:hover>.dp{display:block}.sm:hover>.sp{display:grid;grid-template-columns:repeat(3,minmax(190px,1fr))}}
+.mainnav .sp a{display:block;padding:8px 12px;color:#e8ebe2;font:500 14px/1.25 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:0;white-space:normal}.mainnav .sp a:hover{background:#232822;color:var(--ac)}
+.soon{display:block;padding:14px 16px;color:#8a9481;font-size:14px}
+@media(max-width:900px){.dm{position:static}.dp{left:0;right:0;min-width:0;max-height:75vh;overflow:auto}.sp{position:static;max-width:none;max-height:none;border:0;box-shadow:none;padding:0 0 6px 12px}.sm.open>.sp{display:block}@media(hover:hover){.sm:hover>.sp{display:block}}}
 </style></head><body id="top">
 <div class="top"><div><div class="vt"><a class="on" href="#planner">Planner</a><a href="#gear">Gear</a><a href="https://www.evike.com/" target="_blank" rel="noopener">Evike.com ↗</a></div>
 <div class="tl"><a class="it" href="#how">Checkout happens on Evike.com</a><a href="https://www.evike.com/" target="_blank" rel="noopener">Store Locations ↗</a><a href="#contact">Contact Us</a></div></div></div>
@@ -72,7 +93,7 @@ html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--tx);f
 <a class="na" href="#how">NEW TO<br>AIRSOFT?</a>
 <a class="mi" href="#loadout"><b>Your Kit</b><span>View Loadout »</span></a><a class="mi" href="#loadout"><b>Total</b><span id="ht">$0.00</span></a>
 <a class="cartic" href="#loadout" aria-label="View loadout"><svg width="38" height="38" viewBox="0 0 24 24" fill="currentColor"><path d="M1 3h3.2l.7 3H22l-2.4 8.5H7.6L5.2 5.2 4.6 4H1V3zm7 14.2a1.9 1.9 0 110 3.8 1.9 1.9 0 010-3.8zm9 0a1.9 1.9 0 110 3.8 1.9 1.9 0 010-3.8z"/></svg><em id="hb">0</em></a></div></header>
-<nav class="mainnav"><div><a class="g" href="#planner">Start Planning</a><span class="gr"><a href="#loadout">My Loadout</a><a href="#how">How It Works</a></span><span class="cats" id="nav"></span></div></nav>
+<nav class="mainnav"><div><a class="g" href="#planner">Start Planning</a><span class="gr"><a href="#loadout">My Loadout</a><a href="#how">How It Works</a></span><span class="cats"><div class="dm"><button type="button" class="dt" aria-expanded="false" aria-haspopup="true">Airsoft Guns <i>▾</i></button><div class="dp"><div class="sm"><button type="button" class="st" aria-expanded="false" aria-haspopup="true">Shop By Rifle Models <i>▸</i></button><div class="sp"><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/1110_AR15-M4-M16/" target="_blank" rel="noopener">AR-15 / M4 / M16</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/1430_AK-Series/" target="_blank" rel="noopener">AK Series</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/720_KRISS-Vector/" target="_blank" rel="noopener">KRISS Vector</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/760_P90/" target="_blank" rel="noopener">P90</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/1434_SIG-MCX-MPX/" target="_blank" rel="noopener">SIG MCX / MPX</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/751_AUG/" target="_blank" rel="noopener">AUG</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/819_FAL/" target="_blank" rel="noopener">FAL</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/913_FAMAS/" target="_blank" rel="noopener">FAMAS</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/1109_FN-F2000/" target="_blank" rel="noopener">FN F2000</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/972_G3-HK33/" target="_blank" rel="noopener">G3 / HK33</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/701_G36-XM8/" target="_blank" rel="noopener">G36 / XM8</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/826_Galil/" target="_blank" rel="noopener">Galil</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/846_HK416-HK417/" target="_blank" rel="noopener">HK416 / HK417</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/835_L85/" target="_blank" rel="noopener">L85</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/829_M14-SOC16/" target="_blank" rel="noopener">M14 / SOC-16</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/852_MASADA-ACR/" target="_blank" rel="noopener">MASADA / ACR</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/761_PDW/" target="_blank" rel="noopener">PDW</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/755_SCAR-MK16-MK17/" target="_blank" rel="noopener">SCAR / MK16 / MK17</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/786_SIG-SA-550-551-552/" target="_blank" rel="noopener">SIG/SA 550 551 552</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/922_SR47/" target="_blank" rel="noopener">SR-47</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/845_TAR21-TAVOR/" target="_blank" rel="noopener">TAR21 / TAVOR</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/1234_Type-64-Type-89/" target="_blank" rel="noopener">Type 64 / Type 89</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/1236_VSS-SR3/" target="_blank" rel="noopener">VSS / SR-3</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/1117_Assault-Rifle-Other/" target="_blank" rel="noopener">Assault Rifle (Other)</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/754_B-and-T-APC-MP9-GHM/" target="_blank" rel="noopener">B&amp;T APC / MP9 / GHM</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/1233_CZ-Scorpion-EVO/" target="_blank" rel="noopener">CZ Scorpion EVO</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/700_MP5/" target="_blank" rel="noopener">MP5</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/920_MP7/" target="_blank" rel="noopener">MP7</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/949_Scorpion-VZ61/" target="_blank" rel="noopener">Scorpion VZ61</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/788_Thompson/" target="_blank" rel="noopener">Thompson</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/849_UMP-UMG/" target="_blank" rel="noopener">UMP / UMG</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/850_UZI-MAC10-MAC11/" target="_blank" rel="noopener">UZI / MAC-10 / MAC-11</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/753_SMG-Other/" target="_blank" rel="noopener">SMG (Other)</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/950_L96-Type-96/" target="_blank" rel="noopener">L96 / Type 96</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/752_M700-M24-M40-VSR10/" target="_blank" rel="noopener">M700 / M24 / M40 / VSR10</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/1107_SR25-M110/" target="_blank" rel="noopener">SR25 / M110</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/834_SVD-Dragunov/" target="_blank" rel="noopener">SVD / Dragunov</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/1119_Large-Caliber-Sniper-Rifles/" target="_blank" rel="noopener">Large Caliber Sniper Rifles</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/1230_Sniper-Rifles-Other/" target="_blank" rel="noopener">Sniper Rifles (Other)</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/756_M249-MK46/" target="_blank" rel="noopener">M249 / MK46</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/1235_M60-M240/" target="_blank" rel="noopener">M60 / M240</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/758_Minigun/" target="_blank" rel="noopener">Minigun</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/1114_PKP-PKM-RPD/" target="_blank" rel="noopener">PKP / PKM / RPD</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/684_Machine-Gun-SAW-Other/" target="_blank" rel="noopener">Machine Gun / SAW (Other)</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/942_SciFi-Anime/" target="_blank" rel="noopener">Sci-Fi / Anime</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/1231_Western-Historical/" target="_blank" rel="noopener">Western / Historical</a><a href="https://www.evike.com/shop/21_Airsoft-Guns/672_Shop-By-Rifle-Models/941_WWII/" target="_blank" rel="noopener">WWII</a><a href="https://www.evike.com/specials/?categories_id=672&amp;inc_subcat=1" target="_blank" rel="noopener">Sale/Clearance</a></div></div></div></div><div class="dm"><button type="button" class="dt" aria-expanded="false" aria-haspopup="true">Parts &amp; Accessories <i>▾</i></button><div class="dp"><span class="soon">Categories coming soon</span></div></div><div class="dm"><button type="button" class="dt" aria-expanded="false" aria-haspopup="true">Tactical &amp; Apparel <i>▾</i></button><div class="dp"><span class="soon">Categories coming soon</span></div></div></span></div></nav>
 <section class="hero"><div><h1>Build your <b>battle-ready</b> loadout in 3D</h1><p>Dress a 3D player, set height and weight, equip real Evike.com gear and see the total before you buy.</p><a class="b pri" href="#planner" style="padding:12px 22px;font-size:14px">Start planning</a>
 </div></section>
 <main class="wrap"><h2 class="sec" id="gear">Browse by category</h2><div class="tiles" id="tiles"></div>
@@ -81,7 +102,7 @@ html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--tx);f
 <aside class="menu">
 <div class="tabs" id="tabs"></div><div class="cards" id="cards"></div>
 <div class="note pad">Prices as last seen on Evike. Confirm size, color, stock and eye-protection rating on the product page, and follow your field's rules.</div></aside>
-<main class="stage"><div id="stage"></div><div id="status">Loading 3D model…</div>
+<main class="stage"><button id="tg" class="tg" type="button"></button><div id="stage"></div><div id="status">Loading 3D model…</div>
 <div class="dock"><div class="views" id="views"><button data-a="0">Front</button><button data-a="1.5708">Right</button><button data-a="3.1416">Back</button><button data-a="-1.5708">Left</button><button id="auto" class="on">Auto-rotate</button><button id="rv">Reset view</button><button id="dbg">Copy debug info</button></div>
 <div class="bodyctl"><div class="seg"><button id="gm" class="on">Male</button><button id="gf">Female</button></div>
 <label><span>Height</span><input type="range" id="hs" min="150" max="205" value="178"><b id="hv"></b></label>
@@ -90,12 +111,17 @@ html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--tx);f
 <div class="foot"><div class="tot"><span id="cnt">0 items</span><span id="tot">$0.00</span></div>
 <button class="b pri big" id="co">Checkout on Evike.com</button><button class="b big" id="clr">Clear loadout</button></div></aside></div></main>
 <section class="vals" id="how"><div><div><b>Real gear</b><span>Every item links to Evike.com</span></div><div><b>Live total</b><span>Prices as last seen on Evike</span></div><div><b>3D preview</b><span>Orbit and zoom from any angle</span></div><div><b>Easy checkout</b><span>Send your list to the Evike cart</span></div></div></section>
-<footer class="sf" id="contact"><div><section><h3>Shop gear</h3><div id="fcat"></div></section>
+<section class="cu" id="contact"><div><h2>Contact us</h2><p>Questions or feedback about Armory 360? Send us a message. For questions about an order, contact Evike.com.</p>
+<form id="cf" novalidate><div class="cr2"><label>Name<input id="cn" name="name" type="text" autocomplete="name" required maxlength="100"></label><label>Email<input id="ce" name="email" type="email" autocomplete="email" required maxlength="200"></label></div>
+<label>Message<textarea id="cm" name="message" rows="6" required maxlength="3000"></textarea></label>
+<input id="cw" name="website" type="text" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;opacity:0">
+<div class="cb"><button type="submit" class="b pri" id="cs" style="padding:12px 26px;font-size:14px">Send message</button><span id="cx" role="status" aria-live="polite"></span></div></form></div></section>
+<footer class="sf" id="foot"><div><section><h3>Shop gear</h3><div id="fcat"></div></section>
 <section><h3>Planner</h3><a href="#planner">Loadout planner</a><a href="#loadout">Your loadout</a><a href="#how">How it works</a></section>
 <section><h3>Resources</h3><a href="https://www.evike.com/" target="_blank" rel="noopener">Evike.com ↗</a><a href="https://www.evike.com/" target="_blank" rel="noopener">Store Locations ↗</a><p>Questions about an order go to Evike.com.</p></section>
 <section><h3>About Armory 360</h3><p>Armory 360 is an independent airsoft loadout planner. Pick gear, preview it on a 3D player and send your list to Evike.com to buy.</p>
 <small>Armory 360 is not operated by Evike.com. Prices, specs and stock are as last seen and may change, so confirm everything on the product page. Purchases are completed on Evike.com, and Armory 360 may earn a commission on qualifying orders. Follow local laws and your field's rules, and always wear rated eye protection. Product names and brands belong to their respective owners.</small></section>
-<div class="base"><a class="wm" href="#top">ARMORY<span>360</span></a><span class="cr">3D Models: <a href="https://skfb.ly" target="_blank" rel="noopener">"Basic Human Male"</a> &amp; <a href="https://skfb.ly" target="_blank" rel="noopener">"Basic Human Female"</a> by DNC44 (modified), licensed under <a href="https://creativecommons.org" target="_blank" rel="noopener">CC BY 4.0</a>.</span><span>© 2026 Armory 360</span></div></div></footer>
+<div class="base"><a class="wm" href="#top">ARMORY<span>360</span></a><span class="cr">3D Models: <a href="https://sketchfab.com/3d-models/basic-human-male-598d1d1866df48f999fabadb017429d1" target="_blank" rel="noopener">"Basic Human Male"</a> &amp; <a href="https://sketchfab.com/3d-models/basic-human-female-aa64062267dc4324a04dfdd15f2d2c42" target="_blank" rel="noopener">"Basic Human Female"</a> by <a href="https://sketchfab.com/DNC44" target="_blank" rel="noopener">DNC44</a> (modified), licensed under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>.</span><span>© 2026 Armory 360</span></div></div></footer>
 <div class="modal" id="md"><div class="box"><h2>Your Evike order list</h2><div class="note" style="margin:0 0 8px">Each link opens that exact item on Evike.com. Add them to your cart there.</div><ol id="ol"></ol><div class="row"><button class="b pri" id="all">Open all on Evike</button><button class="b" id="cp">Copy list</button><button class="b" id="x">Close</button></div><div class="note" id="mm">If your browser blocks pop-ups, allow them for this page or open items one at a time.</div></div></div>
 <script id="images">
 const IMGS={};
@@ -177,7 +203,7 @@ const bl = new T.Mesh(new T.PlaneGeometry(1.7, 1.7), new T.MeshBasicMaterial({ma
 // so the height slider never changes width and the weight slider never changes height.
 const wr = new T.Group(); man.add(wr);
 let MS = 1, HF = 1, BW = 1, BWm = 1, SLX = 1, SLZ = 1, FIT = 1, FZ = 1, SHO = null, TORSO = null, REST = null, ARMS = [], GL = [], RIG = null, HDY = 0, CDY = 0, RG = null, HZ = 0, SEX = 'male', LT = 0;
-const TARGET_H = 1.78, GS = TARGET_H / 1.86, POSE_ARMS = !/[?&]pose=0/.test(location.search), CURL = /[?&]curl=1/.test(location.search), STRAIGHTEN = /[?&]straight=1/.test(location.search), BIND = /[?&]bind=1/.test(location.search), HINT = 'Scroll to zoom at the cursor · drag to orbit · right-drag or Shift-drag to pan';
+const TARGET_H = 1.78, GS = TARGET_H / 1.86, POSE_ARMS = /[?&]pose=1/.test(location.search), CURL = /[?&]curl=1/.test(location.search), STRAIGHTEN = /[?&]straight=1/.test(location.search), BIND = /[?&]bind=1/.test(location.search), HINT = 'Scroll to zoom at the cursor · drag to orbit · right-drag or Shift-drag to pan';
 const gear = new T.Group(), cg = new T.Group(); man.add(gear, cg);
 const FN = ['thumb','index','middle','ring','pinky'];
 
@@ -565,7 +591,7 @@ function renderMenu() {
  }).join('') : '<div class="empty">No gear matches your search.</div>';
 }
 function renderTiles() {
- const cl2 = D.map(d => '<a href="#planner" data-t="' + d.k + '">' + d.l + '</a>').join(''); $('nav').innerHTML = cl2; $('fcat').innerHTML = cl2;
+ const cl2 = D.map(d => '<a href="#planner" data-t="' + d.k + '">' + d.l + '</a>').join(''); $('fcat').innerHTML = cl2;
  $('tiles').innerHTML = D.map(d => '<a class="tile" href="#planner" data-t="' + d.k + '"><div class="th">' + thumb(d.i[0], d) + '</div><b>' + d.l + '</b><small>' + d.i.length + (d.i.length == 1 ? ' item' : ' items') + '</small></a>').join('');
 }
 function renderLoadout() {
@@ -578,7 +604,7 @@ function renderLoadout() {
 function change() {renderMenu(); renderLoadout(); build()}
 $('tabs').onclick = e => {const b = e.target.closest('[data-t]'); if (b) {TAB = b.dataset.t; Q = ''; $('q').value = ''; renderMenu()}};
 const goCat = e => {const b = e.target.closest('[data-t]'); if (b) {TAB = b.dataset.t; Q = ''; $('q').value = ''; renderMenu()}};
-$('nav').onclick = goCat; $('fcat').onclick = goCat; $('tiles').onclick = goCat;
+$('fcat').onclick = goCat; $('tiles').onclick = goCat;
 $('q').oninput = e => {Q = e.target.value.trim().toLowerCase(); renderMenu()};
 $('cards').onclick = e => {const b = e.target.closest('[data-k]'); if (!b) return; const k = b.dataset.k, j = +b.dataset.j; if (S[k] === j) delete S[k]; else S[k] = j; change()};
 $('clr').onclick = () => {for (const k in S) delete S[k]; change()};
@@ -603,4 +629,49 @@ function apply() {
 $('hs').oninput = e => {HS = +e.target.value; apply()}; $('ws').oninput = e => {WT = +e.target.value; apply()};
 loadCatalog().then(() => {renderTiles(); apply(); change(); loadModel('male')});
 }
+</script><script>
+(function () {   // dark/light toggle: follows the device until the visitor picks one, then remembers the choice
+ const r = document.documentElement, b = document.getElementById('tg');
+ const cur = () => r.dataset.theme || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+ const paint = () => {const l = cur() == 'light'; b.textContent = l ? '☾ Dark mode' : '☀ Light mode'; b.setAttribute('aria-label', 'Switch to ' + (l ? 'dark' : 'light') + ' mode')};
+ b.onclick = () => {const n = cur() == 'light' ? 'dark' : 'light'; r.dataset.theme = n; try {localStorage.setItem('a360theme', n)} catch (e) {} paint()};
+ paint();
+})();
+</script>
+<script>
+(function () {
+ const CONTACT_EMAIL = '', CONTACT_ENDPOINT = '';   // set ONE later: CONTACT_EMAIL = 'you@yourdomain.com' (opens the visitor's mail app), or CONTACT_ENDPOINT = a form service URL such as Formspree (sends directly)
+ const $ = id => document.getElementById(id), st = $('cx');
+ const say = (t, c) => {st.textContent = t; st.className = c || ''};
+ $('cf').addEventListener('submit', async e => {
+  e.preventDefault();
+  const name = $('cn').value.trim(), email = $('ce').value.trim(), message = $('cm').value.trim();
+  [$('cn'), $('ce'), $('cm')].forEach(x => x.classList.remove('bad'));
+  const okEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  if (!name || !okEmail || !message) {if (!name) $('cn').classList.add('bad'); if (!okEmail) $('ce').classList.add('bad'); if (!message) $('cm').classList.add('bad'); say('Please fill in your name, a valid email and a message.', 'err'); return}
+  if ($('cw').value) {say('Thanks! Your message was sent.', 'ok'); return}   // spam trap: bots fill the hidden field
+  if (CONTACT_ENDPOINT) {
+   $('cs').disabled = true; say('Sending...');
+   try {
+    const r = await fetch(CONTACT_ENDPOINT, {method:'POST', headers:{'Accept':'application/json', 'Content-Type':'application/json'}, body:JSON.stringify({name, email, message})});
+    if (!r.ok) throw new Error(r.status);
+    say('Thanks! Your message was sent.', 'ok'); $('cf').reset();
+   } catch (err) {say('Sorry, the message could not be sent. Please try again later.', 'err')}
+   $('cs').disabled = false;
+  } else if (CONTACT_EMAIL) {
+   location.href = 'mailto:' + CONTACT_EMAIL + '?subject=' + encodeURIComponent('Armory 360 message from ' + name) + '&body=' + encodeURIComponent(message + '\n\n' + name + '\n' + email);
+   say('Opening your email app to send this message.', 'ok');
+  } else {say('The contact form is not connected yet, so this message was not sent.', 'err')}
+ });
+})();
+</script><script>
+(function () {   // dropdowns: hover on desktop, click/tap or keyboard everywhere; Esc or an outside click closes them
+ const closeAll = keep => document.querySelectorAll('.dm.open,.sm.open').forEach(x => {if (!keep || !x.contains(keep)) {x.classList.remove('open'); const b = x.querySelector(':scope > button'); if (b) b.setAttribute('aria-expanded', 'false')}});
+ document.addEventListener('click', e => {
+  const b = e.target.closest('.dt,.st');
+  if (b) {const p = b.parentElement, o = !p.classList.contains('open'); closeAll(p); p.classList.toggle('open', o); b.setAttribute('aria-expanded', String(o))}
+  else if (!e.target.closest('.dp')) closeAll();
+ });
+ document.addEventListener('keydown', e => {if (e.key === 'Escape') closeAll()});
+})();
 </script></body></html>
