@@ -177,7 +177,7 @@ const bl = new T.Mesh(new T.PlaneGeometry(1.7, 1.7), new T.MeshBasicMaterial({ma
 // so the height slider never changes width and the weight slider never changes height.
 const wr = new T.Group(); man.add(wr);
 let MS = 1, HF = 1, BW = 1, BWm = 1, SLX = 1, SLZ = 1, FIT = 1, FZ = 1, SHO = null, TORSO = null, REST = null, ARMS = [], GL = [], RIG = null, HDY = 0, CDY = 0, RG = null, HZ = 0, SEX = 'male', LT = 0;
-const TARGET_H = 1.78, GS = TARGET_H / 1.86, POSE_ARMS = !/[?&]pose=0/.test(location.search), CURL = /[?&]curl=1/.test(location.search), STRAIGHTEN = /[?&]straight=1/.test(location.search), HINT = 'Scroll to zoom at the cursor · drag to orbit · right-drag or Shift-drag to pan';
+const TARGET_H = 1.78, GS = TARGET_H / 1.86, POSE_ARMS = !/[?&]pose=0/.test(location.search), CURL = /[?&]curl=1/.test(location.search), STRAIGHTEN = /[?&]straight=1/.test(location.search), BIND = /[?&]bind=1/.test(location.search), HINT = 'Scroll to zoom at the cursor · drag to orbit · right-drag or Shift-drag to pan';
 const gear = new T.Group(), cg = new T.Group(); man.add(gear, cg);
 const FN = ['thumb','index','middle','ring','pinky'];
 
@@ -257,9 +257,18 @@ function eachVert(root, f, n) {
   for (let i = 0; i < pos.count; i += step) {if (sk) {v.set(0,0,0); o.boneTransform(i, v)} else v.fromBufferAttribute(pos, i); f(man.worldToLocal(v.applyMatrix4(o.matrixWorld)))}
  });
 }
+function bindPose(mdl, sm) {
+ // Put every bone exactly at the pose the skin was bound to (world = inverse of its inverse-bind matrix), so skeleton and mesh agree.
+ // The file's own node pose had per-bone scales that stretch the head and arms (loaded-vs-bind matrix was diag 17.1, 20.5, 31.9, not identity).
+ mdl.updateMatrixWorld(true);
+ const bs = sm.skeleton.bones, W = new Map(bs.map((b, i) => [b, mdl.matrixWorld.clone().multiply(sm.skeleton.boneInverses[i].clone().invert())]));
+ bs.forEach(b => {const pw = W.has(b.parent) ? W.get(b.parent) : b.parent.matrixWorld; pw.clone().invert().multiply(W.get(b)).decompose(b.position, b.quaternion, b.scale)});
+ mdl.updateMatrixWorld(true);
+}
 function onModel(gltf) {
  clearModel();
  const mdl = gltf.scene; mdl.updateMatrixWorld(true);
+ if (BIND) {const sk = []; mdl.traverse(o => {if (o.isSkinnedMesh && o.skeleton) sk.push(o)}); sk.forEach(o => bindPose(mdl, o)); console.log('Armory360: bones reset to the bind pose (?bind=1)')}
  let head = null, top = null; const bones = [], ar = {1:{fingers:{}}, '-1':{fingers:{}}};
  mdl.traverse(o => {
   if (o.isMesh) {
