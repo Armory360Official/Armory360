@@ -307,6 +307,22 @@ function addUnderwear(mdl, sz) {
  cf = cf == 9 ? .46 : cl(cf, .42, .5); by = cl(by, .66, .78);
  console.log('Armory360 underwear landmarks (fractions of height): crotch', cf.toFixed(3), 'bust', by.toFixed(3), 'body mesh', body.name || '(unnamed)');
  const fem = SEX == 'female', top = cf + (fem ? .095 : .105), ylo = ax => Math.min(cf + .07, cf - .005 + .86 * Math.max(0, ax - .02));
+ if (!fem) {
+  // Paint the area black with a per-vertex field that is interpolated across each triangle, so the edge is a clean line whatever the mesh density; texture is ignored there.
+  const F = new Float32Array(n);
+  for (let i = 0; i < n; i++) {const fy = Ry[i] / H, ax = Math.abs(Rx[i]) / H; F[i] = ax < .17 ? Math.min(fy - (cf - .065), top - fy) : -1}
+  g.setAttribute('paintF', new T.BufferAttribute(F, 1));
+  (Array.isArray(body.material) ? body.material : [body.material]).forEach(m => {
+   const prev = m.onBeforeCompile, pk = m.customProgramCacheKey;
+   m.onBeforeCompile = (sh, r) => {
+    if (prev) prev.call(m, sh, r);
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float paintF;\nvarying float vPaint;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvPaint = paintF;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vPaint;').replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.015), smoothstep(-0.0012, 0.0012, vPaint));');
+   };
+   m.customProgramCacheKey = () => (pk ? pk.call(m) : '') + 'paint'; m.needsUpdate = true;
+  });
+  console.log('Armory360 boxer area painted black on the male body (no garment mesh)'); return;
+ }
  const specs = fem ? [
   {inc:(y, a) => a < .17 && y > ylo(a) && y < top, trim:(y, a) => y > top - .013 || y < ylo(a) + .012, col:0x2a2d33, tc:0x464b55},
   {inc:(y, a, z) => (a < .115 && y > by - .052 && y < by - .02) || (z > -.004 && a > .012 && a < .115 && y > by - .052 && y < by + .045) || (a > .05 && a < .068 && y > by + .045 && y < by + .118), trim:(y, a, z) => y < by - .04 || (y > by + .033 && y < by + .046), col:0x2a2d33, tc:0x464b55}
@@ -343,6 +359,11 @@ const FILES = {
  male:{idle:'male', firing:'male_firing_rifle', strafe:'male_strafe_right', pistol:'male_pistol_idle', grenade:'male_grenade_throw', reload:'male_reload', pfiring:'male_prone_firing_rifle', preload:'male_prone_reload'},
  female:{idle:'female', firing:'female_firing_rifle', strafe:'female_strafe_right', pistol:'female_pistol_idle', grenade:'female_grenade_throw', reload:'female_reloading', pfiring:'female_prone_firing_rifle', preload:'female_prone_reloading'}};
 const bname = n => strip(n).replace(/^mixamorig/, '').replace(/_\d+$/, '');   // "mixamorigLeftHand_011" -> "lefthand"
+function chainLen(mdl) {   // total length of the spine and leg bone chains in the model's own frame; rotation does not change it, a scale difference does
+ mdl.updateMatrixWorld(true); const inv = mdl.matrixWorld.clone().invert(), p = k => BM[k] ? BM[k].getWorldPosition(V(0,0,0)).applyMatrix4(inv) : null; let L = 0;
+ [['hips', 'spine', 'spine1', 'spine2', 'neck', 'head'], ['leftupleg', 'leftleg', 'leftfoot'], ['rightupleg', 'rightleg', 'rightfoot']].forEach(c => {for (let i = 0; i + 1 < c.length; i++) {const a = p(c[i]), b = p(c[i + 1]); if (a && b) L += a.distanceTo(b)}});
+ return L;
+}
 function attachGear() {
  // Gear is authored for an upright 1.86 figure (units scaled by GS). Each group is placed once against the bind-pose bone transforms, then parented to its bone so it follows every animation frame.
  const P = k => RESTM[k] ? V(0,0,0).setFromMatrixPosition(RESTM[k]) : null, hd = P('head'), sp = P('spine2'), rh = P('righthand'), mid = P('righthandmiddle1'), th = P('righthandthumb1'), I = new T.Quaternion();
@@ -380,7 +401,7 @@ function onModel(gltf) {
  // measure, ground, dress and place gear against the bind pose, so the result does not depend on which frame the file's own pose is
  const saved = bones.map(b => [b, b.position.clone(), b.quaternion.clone(), b.scale.clone()]);
  try {if (sms[0]) bindPose(mdl, sms[0])} catch (err) {console.warn('Armory360: bind pose skipped', err)}
- mdl.updateMatrixWorld(true);
+ mdl.updateMatrixWorld(true); const Lb = chainLen(mdl);
  {let big = null; mdl.traverse(o => {if (o.isMesh && (!big || o.geometry.attributes.position.count > big.geometry.attributes.position.count)) big = o});
   const sp = new URLSearchParams(location.search).get('skin'), tone = sp ? parseInt(sp.replace('#', ''), 16) : SEX == 'female' ? 0xd9a07f : 0xc68e6e;   // ?skin=c8906e forces a color
   if (big) (Array.isArray(big.material) ? big.material : [big.material]).forEach(m => {const c = m.color; if (c && !m.map && !m.vertexColors && (sp || Math.max(c.r, c.g, c.b) - Math.min(c.r, c.g, c.b) < .08)) {m.color.set(tone); m.needsUpdate = true; console.log('Armory360 skin tone applied to', big.name || '(unnamed mesh)')}})}
@@ -402,6 +423,8 @@ function onModel(gltf) {
   MIX = new T.AnimationMixer(mdl); MIX.clipAction(clip).play(); MIX.update(0);
   console.log('Armory360 animation:', clip.name, clip.duration.toFixed(2) + 's', clip.tracks.length, 'tracks');
  }
+ // Some pose files carry a different overall scale in their own pose than in their bind pose, which made them render far too big. Measure that ratio and cancel it.
+ {const La = chainLen(mdl), sr = Lb > 0 && La > 0 ? La / Lb : 1; console.log('Armory360 pose scale ratio (own pose / bind pose):', sr.toFixed(3)); if (sr > 1.03 || sr < .97) MS /= cl(sr, .001, 1000)}
  // centre the posed body on the pedestal and put its lowest point on y = 0 (prone poses included)
  wr.scale.setScalar(MS); man.updateMatrixWorld(true); mdl.updateMatrixWorld(true);
  const b2 = bounds(mdl, false, 6000);
