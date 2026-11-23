@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>Armory 360</title><meta name="description" content="Interactive 3D airsoft loadout builder and gear configurator. Customize a 3D player model, test-fit tactical gear and replicas, switch poses, and calculate your total kit cost before buying on Evike.com.">
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>Armory 360</title>
 <script>try{var t=localStorage.getItem('a360theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&display=swap">
 <style>
@@ -104,6 +104,7 @@ mark{background:var(--ac);color:#111;border-radius:2px;padding:0 1px}.sr{positio
 @media(max-width:700px){.pc{flex-direction:column}.pc>.th{width:100%;height:180px}.pd{grid-template-columns:1fr}}
 .spx{margin-top:30px;max-width:760px}.spx h2{font:800 26px/1.1 "Barlow Condensed","Arial Narrow",Impact,sans-serif;text-transform:uppercase;margin:0 0 10px}.spx table{width:100%;border-collapse:collapse;margin-bottom:10px}.spx th,.spx td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--ln);vertical-align:top;font-size:14px}.spx th{width:190px;color:var(--mu);font-weight:600}
 @media(max-width:600px){.spx th{width:120px}}
+.bodyctl select{background:var(--pn);color:var(--tx);border:1px solid var(--ln);border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer}.bodyctl select:focus{outline:2px solid var(--ac)}
 </style></head><body id="top">
 <div class="top"><div><div class="vt"><a class="on" href="#planner">Planner</a><a href="#gear">Gear</a><a href="https://www.evike.com/" target="_blank" rel="noopener">Evike.com ↗</a></div>
 <div class="tl"><a class="it" href="#how">Checkout happens on Evike.com</a><a href="https://www.evike.com/" target="_blank" rel="noopener">Store Locations ↗</a><a href="#contact">Contact Us</a></div></div></div>
@@ -123,7 +124,7 @@ mark{background:var(--ac);color:#111;border-radius:2px;padding:0 1px}.sr{positio
 <div class="note pad">Prices as last seen on Evike. Confirm size, color, stock and eye-protection rating on the product page, and follow your field's rules. Items showing a price range count at their lowest price in the total.</div></aside>
 <main class="stage"><button id="tg" class="tg" type="button"></button><div id="stage"></div><div id="status">Loading 3D model…</div>
 <div class="dock"><div class="views" id="views"><button data-a="0">Front</button><button data-a="1.5708">Right</button><button data-a="3.1416">Back</button><button data-a="-1.5708">Left</button><button id="auto" class="on">Auto-rotate</button><button id="rv">Reset view</button><button id="dbg">Copy debug info</button></div>
-<div class="bodyctl"><div class="seg"><button id="gm" class="on">Male</button><button id="gf">Female</button></div>
+<div class="bodyctl"><div class="seg"><button id="gm" class="on">Male</button><button id="gf">Female</button></div><select id="ps" aria-label="Pose"></select>
 <label><span>Height</span><input type="range" id="hs" min="150" max="205" value="178"><b id="hv"></b></label>
 <label><span>Weight</span><input type="range" id="ws" min="45" max="150" value="72"><b id="wv"></b></label></div></div></main>
 <aside class="cart" id="loadout"><h2>Your Evike Loadout</h2><div class="lo" id="lo"></div>
@@ -235,30 +236,18 @@ const bl = new T.Mesh(new T.PlaneGeometry(1.7, 1.7), new T.MeshBasicMaterial({ma
 // Height: man.scale (uniform HF). Weight: BW = body thickness (x/z only). BWm = BW / HF cancels the height scale on x/z,
 // so the height slider never changes width and the weight slider never changes height.
 const wr = new T.Group(); man.add(wr);
-let MS = 1, HF = 1, BW = 1, BWm = 1, SLX = 1, SLZ = 1, FIT = 1, FZ = 1, SHO = null, TORSO = null, REST = null, ARMS = [], GL = [], RIG = null, HDY = 0, CDY = 0, RG = null, HZ = 0, SEX = 'male', LT = 0;
-const TARGET_H = 1.78, GS = TARGET_H / 1.86, POSE_ARMS = /[?&]pose=1/.test(location.search), CURL = /[?&]curl=1/.test(location.search), STRAIGHTEN = /[?&]straight=1/.test(location.search), BIND = /[?&]bind=1/.test(location.search), HINT = 'Scroll to zoom at the cursor · drag to orbit · right-drag or Shift-drag to pan';
-const gear = new T.Group(), cg = new T.Group(); man.add(gear, cg);
-const FN = ['thumb','index','middle','ring','pinky'];
+let MS = 1, HF = 1, BW = 1, BWm = 1, SLX = 1, SLZ = 1, GL = [], RIG = null, RG = null, SEX = 'male', LT = 0, POSE = 'idle', MIX = null, BM = {}, RESTM = {}, NOTE = '';
+const TARGET_H = 1.78, GS = TARGET_H / 1.86, HINT = 'Scroll to zoom at the cursor · drag to orbit · right-drag or Shift-drag to pan';
+const cg = new T.Group(), HGRP = new T.Group(), RGRP = new T.Group(), clk = new T.Clock();   // gear groups; they get parented to the Mixamo bones on load
 
 const strip = raw => raw.replace(/^.*[|:]/, '').replace(/\.\d{3}$/, '').toLowerCase();   // drop "Armature|" / "mixamorig:" prefixes and Blender ".001" suffixes
-function parseBone(raw) {
- const n = strip(raw).replace(/^mixamorig/, '');
- const side = /left/.test(n) ? 1 : /right/.test(n) ? -1 : /(^|[_.\-\s])l\d*($|[_.\-\s])/.test(n) ? 1 : /(^|[_.\-\s])r\d*($|[_.\-\s])/.test(n) ? -1 : 0;
- if (!side) return null;
- const fn = FN.find(f => n.includes(f)) || (/pinkie|little/.test(n) ? 'pinky' : null);
- if (fn) {const m = n.match(/(\d+)(?=[^\d]*$)/); return {side, fn, d:m ? +m[1] : 0}}
- if (/forearm|lowerarm|lower_arm|arm_?lower|elbow/.test(n)) return {side, part:'lo'};
- if (/hand/.test(n) && !/end|top/.test(n)) return {side, part:'hand'};
- if (/arm/.test(n) && !/twist|roll|fore|lower|clav|shoulder/.test(n)) return {side, part:'up'};
- return null;
-}
 function dummy() {   // simple stand-in until the .glb files exist
  const g = new T.Group(), m = M(0x8a9481, .8, 0);
  mk(B(.36, .55, .2), m, 0, 1.3, 0, g); mk(new T.SphereGeometry(.11, 20, 14), m, 0, 1.74, 0, g); mk(B(.1, .06, .1), m, 0, 1.6, 0, g);
  for (const q of [-1, 1]) {mk(B(.12, .86, .14), m, q * .1, .43, 0, g); mk(B(.08, .62, .08), m, q * .25, 1.27, 0, g)}
  return g;
 }
-function clearModel() {while (wr.children.length) wr.remove(wr.children[0]); ARMS = []; GL = []; RIG = null}
+function clearModel() {MIX = null; BM = {}; RESTM = {}; while (wr.children.length) wr.remove(wr.children[0]); GL = []; RIG = null}
 function bounds(root, log, n) {   // true world-space bounds of the posed mesh (skinned vertices included); ignores hidden or ground/stand-like helper meshes
  root.updateMatrixWorld(true); const box = new T.Box3(), v = V(0,0,0), info = [];
  root.traverse(o => {
@@ -341,20 +330,6 @@ function addUnderwear(mdl, sz) {
   console.log('Armory360 garment added:', sel.length / 3, 'triangles');
  });
 }
-function poseOk() {   // reject only a pose that stretches the mesh or changes its height; arms reaching forward are expected
- if (!REST) return true; const z = bounds(RIG, false, 4000).getSize(V(0,0,0)), H = REST.y * HF;
- const ok = z.y > H * .92 && z.y < H * 1.08 && z.x < REST.x * HF * 1.05 && z.z < H * .75;
- if (!ok) console.warn('Armory360 pose check failed: posed size', [z.x, z.y, z.z].map(v => +v.toFixed(3)).join(', '), 'rest size', [REST.x * HF, H, REST.z * HF].map(v => +v.toFixed(3)).join(', '));
- return ok;
-}
-function eachVert(root, f, n) {
- root.updateMatrixWorld(true); const v = V(0,0,0);
- root.traverse(o => {
-  if (!o.isMesh || !o.geometry.attributes.position) return;
-  const pos = o.geometry.attributes.position, sk = o.isSkinnedMesh && typeof o.boneTransform == 'function' && o.geometry.attributes.skinIndex, step = Math.max(1, Math.floor(pos.count / n));
-  for (let i = 0; i < pos.count; i += step) {if (sk) {v.set(0,0,0); o.boneTransform(i, v)} else v.fromBufferAttribute(pos, i); f(man.worldToLocal(v.applyMatrix4(o.matrixWorld)))}
- });
-}
 function bindPose(mdl, sm) {
  // Put every bone exactly at the pose the skin was bound to (world = inverse of its inverse-bind matrix), so skeleton and mesh agree.
  // The file's own node pose had per-bone scales that stretch the head and arms (loaded-vs-bind matrix was diag 17.1, 20.5, 31.9, not identity).
@@ -363,16 +338,36 @@ function bindPose(mdl, sm) {
  bs.forEach(b => {const pw = W.has(b.parent) ? W.get(b.parent) : b.parent.matrixWorld; pw.clone().invert().multiply(W.get(b)).decompose(b.position, b.quaternion, b.scale)});
  mdl.updateMatrixWorld(true);
 }
+const POSES = [['idle', 'Idle'], ['firing', 'Firing Rifle'], ['strafe', 'Strafe Right'], ['pistol', 'Pistol Idle'], ['grenade', 'Grenade Throw'], ['reload', 'Reloading'], ['pfiring', 'Prone Firing Rifle'], ['preload', 'Prone Reloading']];
+const FILES = {
+ male:{idle:'male', firing:'male_firing_rifle', strafe:'male_strafe_right', pistol:'male_pistol_idle', grenade:'male_grenade_throw', reload:'male_reload', pfiring:'male_prone_firing_rifle', preload:'male_prone_reload'},
+ female:{idle:'female', firing:'female_firing_rifle', strafe:'female_strafe_right', pistol:'female_pistol_idle', grenade:'female_grenade_throw', reload:'female_reloading', pfiring:'female_prone_firing_rifle', preload:'female_prone_reloading'}};
+const bname = n => strip(n).replace(/^mixamorig/, '').replace(/_\d+$/, '');   // "mixamorigLeftHand_011" -> "lefthand"
+function attachGear() {
+ // Gear is authored for an upright 1.86 figure (units scaled by GS). Each group is placed once against the bind-pose bone transforms, then parented to its bone so it follows every animation frame.
+ const P = k => RESTM[k] ? V(0,0,0).setFromMatrixPosition(RESTM[k]) : null, hd = P('head'), sp = P('spine2'), rh = P('righthand'), mid = P('righthandmiddle1'), th = P('righthandthumb1'), I = new T.Quaternion();
+ const comp = (pos, q, sc) => new T.Matrix4().compose(pos, q, V(sc, sc, sc));
+ const put = (grp, key, M) => {const b = BM[key]; grp.matrixAutoUpdate = false; if (b && RESTM[key]) {grp.matrix.copy(RESTM[key].clone().invert().multiply(M)); b.add(grp)} else {grp.matrix.copy(M); man.add(grp); console.warn('Armory360: bone not found for', key, '(gear stays fixed)')} grp.matrixWorldNeedsUpdate = true};
+ const c0 = V(0, 1.752, -.005), hc = hd ? hd.clone().add(V(0, .085, .012)) : V(0, 1.67, .01);   // helmet centre in gear units -> a point just above the head bone
+ put(HGRP, 'head', comp(hc.clone().sub(c0.clone().multiplyScalar(GS)), I, GS));
+ const ch = V(0, 1.3, 0), cc = sp ? sp.clone().add(V(0, -.055, 0)) : V(0, 1.27, 0);   // plate centre -> a point just below the chest bone
+ put(cg, 'spine2', comp(cc.clone().sub(ch.clone().multiplyScalar(GS)), I, GS));
+ // rifle: barrel along the right hand's finger direction, rifle "up" toward the thumb side, pistol grip at the palm
+ let f = V(-1, 0, 0), t = V(0, 0, 1), hp = V(-.4, 1.45, 0);
+ if (rh && mid) {f = mid.clone().sub(rh).normalize(); hp = rh.clone(); if (th) {const t0 = th.clone().sub(rh); t = t0.sub(f.clone().multiplyScalar(t0.dot(f))).normalize()}}
+ const y = t, z = f, x = y.clone().cross(z).normalize(), q = new T.Quaternion().setFromRotationMatrix(new T.Matrix4().makeBasis(x, y, z)), up = new URLSearchParams(location.search);
+ const nums = (k, n) => (up.get(k) || '').split(',').map(Number).concat(Array(n).fill(0)).slice(0, n).map(v => v || 0), rr = nums('rrot', 3), rp = nums('rpos', 3);   // ?rrot=deg,deg,deg and ?rpos=x,y,z (rifle-local) tune the hold
+ q.multiply(new T.Quaternion().setFromEuler(new T.Euler(rr[0] * Math.PI / 180, rr[1] * Math.PI / 180, rr[2] * Math.PI / 180)));
+ const s = .78 * GS, pg = V(0, -.09, -.105), grip = hp.clone().add(f.clone().multiplyScalar(.05));
+ put(RGRP, 'righthand', comp(grip.sub(pg.multiplyScalar(s).applyQuaternion(q)).add(V(rp[0], rp[1], rp[2]).applyQuaternion(q)), q, s));
+}
 function onModel(gltf) {
  clearModel();
- const mdl = gltf.scene; mdl.updateMatrixWorld(true);
- if (BIND) {const sk = []; mdl.traverse(o => {if (o.isSkinnedMesh && o.skeleton) sk.push(o)}); sk.forEach(o => bindPose(mdl, o)); console.log('Armory360: bones reset to the bind pose (?bind=1)')}
- let head = null, top = null; const bones = [], ar = {1:{fingers:{}}, '-1':{fingers:{}}};
+ const mdl = gltf.scene, bones = [], sms = []; mdl.updateMatrixWorld(true);
  mdl.traverse(o => {
   if (o.isMesh) {
-   o.castShadow = o.receiveShadow = true; o.frustumCulled = false;
-   if (o.isSkinnedMesh) {console.log('Armory360 skinned mesh', o.name, 'bindMatrix (node transform) before reset:', Array.from(o.bindMatrix.elements).map(v => +v.toFixed(4)).join(', ')); o.bindMatrix.identity(); o.bindMatrixInverse.identity()}
-   if (o.morphTargetInfluences && o.morphTargetInfluences.length) {console.log('Armory360 morph targets on', o.name, o.morphTargetDictionary, Array.from(o.morphTargetInfluences)); o.morphTargetInfluences.fill(0)}
+   o.castShadow = o.receiveShadow = true; o.frustumCulled = false; if (o.isSkinnedMesh) sms.push(o);
+   if (o.morphTargetInfluences && o.morphTargetInfluences.length) o.morphTargetInfluences.fill(0);
    (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => {
     if (m.envMapIntensity !== undefined) m.envMapIntensity = .45;
     if (m.metalness !== undefined) m.metalness = Math.min(m.metalness, .1);
@@ -380,163 +375,68 @@ function onModel(gltf) {
     m.needsUpdate = true;
    });
   }
-  if (o.isBone) {
-   o.userData.rq = o.quaternion.clone(); bones.push(o);
-   const n = strip(o.name);
-   if (/head.?top|head_?end/.test(n)) top = o; else if (/(^|[_.\-])head$/.test(n)) head = o;
-   const p = parseBone(o.name);
-   if (p) {const a = ar[p.side]; if (p.fn) (a.fingers[p.fn] = a.fingers[p.fn] || []).push({b:o, d:p.d}); else a[p.part] = o}
-  }
+  if (o.isBone) {bones.push(o); const k = bname(o.name); if (!BM[k]) BM[k] = o}
  });
- // real mesh bounds (skinned vertices included): uniform scale to TARGET_H keeps natural proportions, feet land on y = 0, body centered
+ // measure, ground, dress and place gear against the bind pose, so the result does not depend on which frame the file's own pose is
+ const saved = bones.map(b => [b, b.position.clone(), b.quaternion.clone(), b.scale.clone()]);
+ try {if (sms[0]) bindPose(mdl, sms[0])} catch (err) {console.warn('Armory360: bind pose skipped', err)}
+ mdl.updateMatrixWorld(true);
  {let big = null; mdl.traverse(o => {if (o.isMesh && (!big || o.geometry.attributes.position.count > big.geometry.attributes.position.count)) big = o});
   const sp = new URLSearchParams(location.search).get('skin'), tone = sp ? parseInt(sp.replace('#', ''), 16) : SEX == 'female' ? 0xd9a07f : 0xc68e6e;   // ?skin=c8906e forces a color
   if (big) (Array.isArray(big.material) ? big.material : [big.material]).forEach(m => {const c = m.color; if (c && !m.map && !m.vertexColors && (sp || Math.max(c.r, c.g, c.b) - Math.min(c.r, c.g, c.b) < .08)) {m.color.set(tone); m.needsUpdate = true; console.log('Armory360 skin tone applied to', big.name || '(unnamed mesh)')}})}
- const bb = bounds(mdl, true), sz = bb.getSize(V(0,0,0)), ct = bb.getCenter(V(0,0,0));
- if (!bb.isEmpty() && sz.y > 1e-6) try {slimMesh(mdl, bb, ct, sz, SEX == 'female' ? .155 : .17, SEX == 'female' ? .115 : .125, +new URLSearchParams(location.search).get('slim') || 1)} catch (err) {console.warn('Armory360: slimming skipped', err)}
- if (bb.isEmpty() || !(sz.y > 1e-6)) {console.warn('Armory360: could not measure model, using scale 1'); MS = 1}
- else {MS = TARGET_H / sz.y; mdl.position.x -= ct.x; mdl.position.z -= ct.z; mdl.position.y -= bb.min.y}
- try {if (!bb.isEmpty() && sz.y > 1e-6) addUnderwear(mdl, sz)} catch (err) {console.warn('Armory360: underwear skipped', err)}
- console.log('Armory360 model size (units):', sz.x.toFixed(3), sz.y.toFixed(3), sz.z.toFixed(3), 'scale:', MS);
- // a T-pose arm span should be about the body height; if the model is wider than that, slim x/z (arms, shoulders, torso, legs) to fit
- const fq = new URLSearchParams(location.search).get('fit'), span = sz.x / (sz.y || 1);
- const up_ = new URLSearchParams(location.search), sl = +up_.get('slim') || .85, dp = +up_.get('depth') || .92;
- FIT = fq ? cl(+fq || 1, .4, 1.2) : (span > 1.08 ? cl(1 / span, .55, 1) : 1) * sl; FZ = FIT * dp; FIT = FZ = 1;   // thickness is baked into the mesh (slimMesh), never squashed at the root   // ?slim=0.8 and ?depth=0.9 tune the width and front-to-back thickness
- console.log('Armory360 arm span / height:', span.toFixed(2), '-> width fit', FIT.toFixed(2), '(try ?fit=0.8 in the URL to override)');
- ARMS = [-1, 1].map(s => {const a = ar[s], f = {}; for (const k in a.fingers) f[k] = a.fingers[k].sort((p, q) => p.d - q.d).map(x => x.b); return {s, up:a.up, lo:a.lo, hand:a.hand, fingers:f}});
- const armsOk = ARMS.some(a => a.up && a.lo && a.hand);
- const rows = bones.map(b => {
-  const q = b.quaternion, e = new T.Euler().setFromQuaternion(q, 'XYZ'), wq = b.getWorldQuaternion(new T.Quaternion()), f = v => +v.toFixed(3);
-  const ax = v => {const d = v.applyQuaternion(wq); return [f(d.x), f(d.y), f(d.z)].join(', ')};
-  return {bone:b.name, parent:b.parent ? b.parent.name : '', eulerXYZ_deg:[e.x, e.y, e.z].map(r => +(r * 57.2958).toFixed(1)).join(', '), quat_xyzw:[q.x, q.y, q.z, q.w].map(f).join(', '), localX_in_model:ax(V(1,0,0)), localY_in_model:ax(V(0,1,0)), localZ_in_model:ax(V(0,0,1)), pos:[b.position.x, b.position.y, b.position.z].map(f).join(', ')};
- });
- console.groupCollapsed('Armory360 skeleton: ' + rows.length + ' bones (rest rotations and local axes)'); console.table(rows); console.log(JSON.stringify(rows)); console.groupEnd();
- console.log('Armory360 arm mapping:', ARMS.map(a => ({side:a.s, up:a.up && a.up.name, lo:a.lo && a.lo.name, hand:a.hand && a.hand.name, fingers:Object.fromEntries(Object.entries(a.fingers).map(([k, v]) => [k, v.map(b => b.name)]))})));
+ const bb = bounds(mdl, true), sz = bb.getSize(V(0,0,0)), ct = bb.getCenter(V(0,0,0)), ok = !bb.isEmpty() && sz.y > 1e-6;
+ if (ok && /[?&]slim=/.test(location.search)) try {slimMesh(mdl, bb, ct, sz, SEX == 'female' ? .155 : .17, SEX == 'female' ? .115 : .125, +new URLSearchParams(location.search).get('slim') || 1)} catch (err) {console.warn('Armory360: slimming skipped', err)}   // opt-in: it works in world space, so it is only right for upright poses
+ if (!ok) {console.warn('Armory360: could not measure model, using scale 1'); MS = 1} else {MS = TARGET_H / sz.y; mdl.position.x -= ct.x; mdl.position.z -= ct.z; mdl.position.y -= bb.min.y}
+ try {if (ok) addUnderwear(mdl, sz)} catch (err) {console.warn('Armory360: underwear skipped', err)}
+ console.log('Armory360 model size (units):', sz.x.toFixed(3), sz.y.toFixed(3), sz.z.toFixed(3), 'scale:', MS, 'bones:', bones.length);
  wr.add(mdl); RIG = mdl; wr.scale.setScalar(MS); man.updateMatrixWorld(true);
- if (STRAIGHTEN) {
-  const dep = o => {let n = 0; while (o.parent) {o = o.parent; n++} return n}, chain = bones.filter(b => /spine|chest|neck|(^|[_.\-])head$/.test(strip(b.name))).sort((a, b) => dep(a) - dep(b)); if (top) chain.push(top);
-  const h0 = bounds(mdl, false, 6000).getSize(V(0,0,0)).y, old = chain.map(b => b.quaternion.clone());
-  for (let i = 0; i < chain.length - 1; i++) {wr.updateMatrixWorld(true); const iv = invW(), d = lp(chain[i + 1], iv).sub(lp(chain[i], iv)); if (d.length() > 1e-6 && d.angleTo(V(0,1,0)) < .6) aimBone(chain[i], chain[i + 1], V(0,1,0))}
-  const h1 = bounds(mdl, false, 6000).getSize(V(0,0,0)).y;
-  if (chain.length >= 3 && Math.abs(h1 / h0 - 1) < .06) chain.forEach(b => b.userData.rq = b.quaternion.clone()); else {chain.forEach((b, i) => b.quaternion.copy(old[i])); console.warn('Armory360: posture straightening skipped')}
-  console.log('Armory360 posture chain:', chain.map(b => b.name).join(' > '));
+ const mi = man.matrixWorld.clone().invert();
+ ['head', 'spine2', 'lefthand', 'righthand', 'lefthandmiddle1', 'righthandmiddle1', 'lefthandthumb1', 'righthandthumb1'].forEach(k => {if (BM[k]) RESTM[k] = mi.clone().multiply(BM[k].matrixWorld)});
+ console.log('Armory360 gear bones found:', Object.keys(RESTM).join(', ') || 'none');
+ saved.forEach(([b, p, q, sc]) => {b.position.copy(p); b.quaternion.copy(q); b.scale.copy(sc)});   // back to the file's own pose
+ // play the embedded Mixamo clip; root motion on the hips is removed so the character stays in place
+ const anims = gltf.animations || [];
+ if (anims.length) {
+  const clip = anims.slice().sort((a, b) => b.tracks.length - a.tracks.length)[0].clone();
+  clip.tracks.forEach(t => {if (/hips\.position$/i.test(t.name)) {const v = t.values; for (let i = 3; i < v.length; i += 3) {v[i] = v[0]; v[i + 2] = v[2]}}});
+  MIX = new T.AnimationMixer(mdl); MIX.clipAction(clip).play(); MIX.update(0);
+  console.log('Armory360 animation:', clip.name, clip.duration.toFixed(2) + 's', clip.tracks.length, 'tracks');
  }
- // gear anchors follow the skeleton: helmet/goggles to the head bones, carrier + rifle to the shoulder line
- const ml = b => man.worldToLocal(b.getWorldPosition(V(0,0,0)));
- HDY = cl((top ? ml(top).y : TARGET_H) / GS - .11 - 1.752, -.1, .1);   // gear is authored for a 1.86 figure, so convert to gear units
- const sy = ARMS.filter(a => a.up).map(a => ml(a.up).y); CDY = sy.length ? cl(sy.reduce((x, y) => x + y) / sy.length / GS - 1.5, -.08, .08) : 0;
- SHO = ARMS[0].up ? {x:ml(ARMS[0].up).x, y:ml(ARMS[0].up).y} : null;
-
- let tz = -1e9; eachVert(mdl, p => {if (p.y > 1.05 && p.y < 1.3 && Math.abs(p.x) < .3) tz = Math.max(tz, p.z)}, 60000); TORSO = tz > -1e8 ? {z:tz * SLZ} : null;
- console.log('Armory360 anchors: shoulder', JSON.stringify(SHO), 'chest front z', TORSO && TORSO.z, 'HDY', HDY, 'CDY', CDY, 'sex', SEX);
-
- {const bh = n => {const b = bones.find(x => new RegExp(n, 'i').test(x.name)); return n + '=' + (b ? ml(b).y.toFixed(3) : 'n/a')};
-  console.log('Armory360 bone heights (man units, mesh top is ' + TARGET_H + '):', ['hips', 'spine', 'neck', 'head', 'headtop', 'leftfoot', 'lefttoe'].map(bh).join(' '));
-  const ob = new T.Box3(); mdl.traverse(o => {if (o.isMesh) {o.geometry.computeBoundingBox(); ob.union(o.geometry.boundingBox)}}); const rs = ob.getSize(V(0,0,0)); console.log('Armory360 raw geometry size', rs.x.toFixed(3), rs.y.toFixed(3), rs.z.toFixed(3));
-  const sk = []; mdl.traverse(o => {if (o.isSkinnedMesh) sk.push(o)});
-  if (sk[0]) {const i = Math.max(0, sk[0].skeleton.bones.indexOf(ARMS[1].up || bones[0])), B = mdl.matrixWorld.clone().invert().multiply(sk[0].skeleton.bones[i].matrixWorld).multiply(sk[0].skeleton.boneInverses[i]);
-   console.log('Armory360 loaded pose vs bind pose (bone ' + sk[0].skeleton.bones[i].name + '; identity means they match):', Array.from(B.elements).map(v => +v.toFixed(3)).join(', '))}}
- REST = bounds(mdl, false, 6000).getSize(V(0,0,0)).divideScalar(HF);
- $('status').textContent = armsOk || bones.length == 0 ? HINT : 'Hand bones not recognised, gloves hidden (see console for bone names)'; apply(); build();
+ // centre the posed body on the pedestal and put its lowest point on y = 0 (prone poses included)
+ wr.scale.setScalar(MS); man.updateMatrixWorld(true); mdl.updateMatrixWorld(true);
+ const b2 = bounds(mdl, false, 6000);
+ if (!b2.isEmpty()) {const c = b2.getCenter(V(0,0,0)), iw = wr.matrixWorld.clone().invert(), d = V(-c.x, -b2.min.y, -c.z); d.applyMatrix4(iw).sub(V(0,0,0).applyMatrix4(iw)); mdl.position.add(d); mdl.updateMatrixWorld(true)}
+ attachGear();
+ $('status').textContent = NOTE || (anims.length || !bones.length ? HINT : 'No animation found in this file, showing its default pose'); NOTE = '';
+ apply(); build();
 }
 const gltfLoader = new T.GLTFLoader();
 function loadModel(sex) {
- const t = ++LT, url = './' + sex + '.glb'; SEX = sex; $('status').textContent = 'Loading 3D model…';
- gltfLoader.load(url, g => {if (t == LT) onModel(g)}, undefined, () => {if (t != LT) return; onModel({scene:dummy()}); $('status').textContent = url + ' not found, showing placeholder'});
-}
-
-const Qa = new T.Quaternion(), Qb = new T.Quaternion(), Qc = new T.Quaternion(), Qd = new T.Quaternion();
-const invW = () => new T.Matrix4().copy(wr.matrixWorld).invert();
-function lp(b, inv) { return b.getWorldPosition(V(0,0,0)).applyMatrix4(inv) }
-function aimBone(b, child, dir) {
- wr.updateMatrixWorld(true);
- const inv = invW(), cur = lp(child, inv).sub(lp(b, inv)).normalize();
- const wq = wr.getWorldQuaternion(Qa).clone(), wqi = wq.clone().invert();
- const bw = wqi.clone().multiply(b.getWorldQuaternion(Qb)), pw = wqi.clone().multiply(b.parent.getWorldQuaternion(Qc));
- const dq = new T.Quaternion().setFromUnitVectors(cur, dir.clone().normalize());
- const res = pw.invert().multiply(dq.multiply(bw));
- if ([res.x, res.y, res.z, res.w].every(isFinite)) b.quaternion.copy(res);
-}
-const AX = [V(1,0,0), V(0,1,0), V(0,0,1)];
-function curl(a, tgt) {
- // One bend axis per hand (found on the middle finger) and one shared curl amount, so every finger folds the same way.
- // Each finger only picks its sign (+/-) against that shared axis, which stops wavy or splayed fingers.
- const F = a.fingers, mid = F.middle; if (!mid || mid.length < 2) return;
- const A = [.9, 1.1, .8];
- const set = (ch, ax, sg, s, angs) => {for (let j = 0; j < Math.min(3, ch.length - 1); j++) {const b = ch[j]; b.quaternion.copy(b.userData.rq).multiply(Qd.setFromAxisAngle(ax, sg * angs[j] * s))} wr.updateMatrixWorld(true)};
- const dist = ch => lp(ch[ch.length - 1], invW()).distanceTo(tgt);
- let best = {d:1e9}; for (const ax of AX) for (const sg of [-1, 1]) {set(mid, ax, sg, 1, A); const d = dist(mid); if (d < best.d) best = {d, ax, sg}}
- let bs = 1, bd = 1e9; for (let s = .3; s <= 1.31; s += .1) {set(mid, best.ax, best.sg, s, A); const d = dist(mid); if (d < bd) {bd = d; bs = s}}
- for (const fn of ['index','middle','ring','pinky']) {
-  const ch = F[fn]; if (!ch || ch.length < 2) continue;
-  let sg = best.sg, sd = 1e9; for (const q of [best.sg, -best.sg]) {set(ch, best.ax, q, bs, A); const d = dist(ch); if (d < sd - 1e-4) {sd = d; sg = q}}
-  set(ch, best.ax, sg, bs, A);
- }
- const th = F.thumb; if (th && th.length > 1) {
-  const TA = [.5, .5, .4]; let tb = {d:1e9}; for (const ax of AX) for (const sg of [-1, 1]) {set(th, ax, sg, 1, TA); const d = dist(th); if (d < tb.d) tb = {d, ax, sg}}
-  set(th, tb.ax, tb.sg, 1, TA);
- }
-}
-function restPose() {   // back to the model's own T-pose
- ARMS.forEach(a => [a.up, a.lo, a.hand, ...Object.values(a.fingers).flat()].forEach(b => b && b.userData.rq && b.quaternion.copy(b.userData.rq)));
- wr.updateMatrixWorld(true);
-}
-function pose(tg, grip) {
- if (!tg || !RIG || !ARMS.some(a => a.up && a.lo && a.hand)) return;
- wr.scale.setScalar(MS); man.updateMatrixWorld(true); wr.updateMatrixWorld(true);
- // IK runs with the body at uniform scale; targets are mapped into that space, then the width scale is applied afterwards
- const tl = v => V(v.x / (MS * BWm * FIT), v.y / MS, v.z / (MS * BWm * FZ));
- ARMS.forEach((a, i) => {
-  if (!a.up || !a.lo || !a.hand || !tg[i]) return;
-  [a.up, a.lo, a.hand].forEach(b => b.quaternion.copy(b.userData.rq));
-  for (const fn in a.fingers) a.fingers[fn].forEach(b => b.quaternion.copy(b.userData.rq));
-  wr.updateMatrixWorld(true);
-  const inv = invW();
-  const S0 = lp(a.up, inv), E0 = lp(a.lo, inv), H0 = lp(a.hand, inv), L1 = S0.distanceTo(E0), L2 = E0.distanceTo(H0);
-  const P = tl(tg[i]), m0 = a.fingers.middle && a.fingers.middle[0], po = m0 ? lp(m0, inv).distanceTo(H0) * .7 : 0;
-  const H = P.clone().sub(P.clone().sub(S0).normalize().multiplyScalar(po));
-  const v = H.clone().sub(S0); let d = v.length(); const u = v.clone().normalize();
-  if (d > L1 + L2 - .005 / MS) {d = L1 + L2 - .005 / MS; H.copy(S0).add(u.clone().multiplyScalar(d))}
-  const ad = (L1*L1 - L2*L2 + d*d) / (2*d), h = Math.sqrt(Math.max(L1*L1 - ad*ad, 0));
-  const pv = V(a.s * .6, -1, -.35), n = pv.sub(u.clone().multiplyScalar(pv.dot(u))).normalize();
-  const E = S0.clone().add(u.clone().multiplyScalar(ad)).add(n.multiplyScalar(h));
-  aimBone(a.up, a.lo, E.clone().sub(S0));
-  wr.updateMatrixWorld(true);
-  aimBone(a.lo, a.hand, H.clone().sub(lp(a.lo, invW())));
-  wr.updateMatrixWorld(true);
-  if (CURL && grip && grip[i]) curl(a, tl(grip[i]));
+ const t = ++LT, url = './' + FILES[sex][POSE] + '.glb'; SEX = sex; $('status').textContent = 'Loading 3D model…';
+ gltfLoader.load(url, g => {if (t == LT) onModel(g)}, undefined, () => {
+  if (t != LT) return;
+  if (POSE != 'idle') {NOTE = url + ' not found, showing the idle pose'; POSE = 'idle'; $('ps').value = 'idle'; loadModel(sex); return}
+  NOTE = url + ' not found, showing placeholder'; onModel({scene:dummy(), animations:[]});
  });
 }
-function layout() {
- wr.scale.setScalar(MS); man.updateMatrixWorld(true);
- try {
-  if (RG) {
-   const k = .78 / HF, d = V(.1, -.05, .99).normalize(); RG.scale.setScalar(k); RG.quaternion.setFromUnitVectors(V(0, 0, 1), d);
-   const tz = cl((TORSO ? TORSO.z * BWm * FZ : .13) + .03, .08, .22), tx = cl(SHO ? SHO.x * BWm * .6 : -.14, -.2, -.08), ty = cl(SHO ? SHO.y - .04 : 1.4, 1.3, 1.48);
-   RG.position.copy(V(tx, ty, tz).divideScalar(GS)).add(d.clone().multiplyScalar(.385 * k));
-   const Lc = (x, y, z) => V(x, y, z).multiplyScalar(k).applyQuaternion(RG.quaternion).add(RG.position);
-   if (POSE_ARMS) {pose([Lc(-.03, -.09, -.105), Lc(.04, -.012, HZ - .06)].map(p => p.multiplyScalar(GS)), [Lc(.012, -.09, -.105), Lc(-.012, -.015, HZ - .06)].map(p => p.multiplyScalar(GS)));
-    if (!poseOk()) {console.warn('Armory360: arm pose rejected (mesh distorted), staying in T-pose'); restPose(); $('status').textContent = 'Arm pose rejected for this rig, staying in T-pose (see console)'}} else restPose();
-  } else restPose();   // no rifle: arms and fingers stay in the model's T-pose
- } catch (err) {console.warn('Armory360 pose skipped:', err)}
- wr.scale.set(MS * BWm * FIT, MS, MS * BWm * FZ);   // always applied, so height/weight keep working even if posing fails
-}
+
+function layout() {wr.scale.set(MS * BWm, MS, MS * BWm)}   // weight = thickness on x/z, height = uniform scale on the whole figure
 
 /* ---------- gear ---------- */
 function setGlove(gv) {   // gloves are small shells on the hand bones, sized from the measured hand length
  GL.forEach(g => g.parent && g.parent.remove(g)); GL = [];
  if (!gv || !RIG) return;
  const mt = MAT.fabric(gv.c); man.updateMatrixWorld(true);
- ARMS.forEach(a => {
-  if (!a.hand) return;
-  const m0 = a.fingers.middle && a.fingers.middle[0], off = m0 && m0.parent == a.hand ? m0.position.clone() : V(0, 0, 0);
-  const hlw = m0 ? a.hand.getWorldPosition(V(0,0,0)).distanceTo(m0.getWorldPosition(V(0,0,0))) : .08 * HF, bs = a.hand.getWorldScale(V(0,0,0)).y || 1;
-  const o = new T.Mesh(new T.SphereGeometry(1, 14, 10), mt); o.scale.setScalar(cl(hlw * .85, .03 * HF, .06 * HF) / bs); o.position.copy(off.multiplyScalar(.5)); o.castShadow = true; a.hand.add(o); GL.push(o);
- });
+ for (const sd of ['left', 'right']) {
+  const h = BM[sd + 'hand']; if (!h) continue;
+  const m0 = BM[sd + 'handmiddle1'], off = m0 && m0.parent == h ? m0.position.clone() : V(0, 0, 0);
+  const hlw = m0 ? h.getWorldPosition(V(0,0,0)).distanceTo(m0.getWorldPosition(V(0,0,0))) : .08 * HF, bs = h.getWorldScale(V(0,0,0)).y || 1;
+  const o = new T.Mesh(new T.SphereGeometry(1, 14, 10), mt); o.scale.setScalar(cl(hlw * .85, .03 * HF, .06 * HF) / bs); o.position.copy(off.multiplyScalar(.5)); o.castShadow = true; h.add(o); GL.push(o);
+ }
 }
 function build() {
- for (const g of [gear, cg]) while (g.children.length) g.remove(g.children.at(0));
- const hg = new T.Group(); hg.position.y = HDY; gear.add(hg); cg.position.y = CDY;
+ for (const g of [HGRP, cg, RGRP]) while (g.children.length) g.remove(g.children.at(0));
+ const hg = HGRP;
  const it = k => {const d = D.find(x => x.k == k); return S[k] != null ? d.i.at(S[k]) : null};
  let h = it('helmet'); if (h) {
   const dk = MAT.poly(0x0b0b0b), rl = MAT.poly(h.c), dm = MAT.poly(h.c), hel = new T.Group(); dm.side = T.DoubleSide; hel.matrixAutoUpdate = false; hel.matrix.set(1,0,0,0,0,1,.6,0,0,0,1,0,0,0,0,1); hg.add(hel);
@@ -579,7 +479,7 @@ function build() {
  setGlove(it('gloves'));
  const r = it('rifle'); RG = null;
  if (r) {
-  const m = MAT.gun(0x303234), b = MAT.gun(0x1c1d1f), rg = new T.Group(); gear.add(rg); const pd = !!r.pdw, hl = pd ? .2 : .3, hz = pd ? .26 : .3;
+  const m = MAT.gun(0x303234), b = MAT.gun(0x1c1d1f), rg = RGRP; const pd = !!r.pdw, hl = pd ? .2 : .3, hz = pd ? .26 : .3;
   mk(B(.05, .085, .3), m, 0, 0, 0, rg);
   mk(C(.033, .033, hl), m, 0, .005, hz, rg).rotation.x = Math.PI / 2;
   mk(C(.009, .009, .14), b, 0, .005, pd ? .42 : .52, rg).rotation.x = Math.PI / 2;
@@ -594,9 +494,8 @@ function build() {
   mk(B(.006, .006, .085), b, 0, -.1, -.04, rg); mk(B(.006, .05, .006), b, 0, -.075, .0, rg); mk(B(.007, .028, .012), b, 0, -.065, -.035, rg).rotation.x = .3;
   mk(B(.034, .17, .065), b, 0, -.135, .04, rg).rotation.x = -.22;
   if (pd) {mk(B(.032, .02, .05), b, 0, .067, .06, rg); mk(C(.026, .026, .075, 16), b, 0, .098, .06, rg).rotation.x = Math.PI / 2; mk(C(.021, .021, .008, 14), M(0x6fa0c8, .1, .3), 0, .098, .1, rg).rotation.x = Math.PI / 2}
-  RG = rg; HZ = hz;
+  RG = rg;
  }
- layout();
 }
 
 /* ---------- camera: orbit + pan + zoom toward the cursor ---------- */
@@ -631,6 +530,7 @@ $('dbg').onclick = async () => {const t = LOGS.join('\n'); try {await navigator.
 $('rv').onclick = () => {home(); ytg = 0; place()};
 (function loop() {
  requestAnimationFrame(loop);
+ {const dt = clk.getDelta(); if (MIX) MIX.update(dt)}
  if (!ptr.size) {
   if (ytg !== null) {let d = ytg - yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); yaw += d * .12; pitch += (.05 - pitch) * .12; if (Math.abs(d) < .002) ytg = null; place()}
   else if (auto) {yaw -= .006; place()}
@@ -683,13 +583,14 @@ $('all').onclick = () => picked().forEach(x => window.open(buyUrl(x), '_blank', 
 $('cp').onclick = async () => {const t = picked().map(x => x.n + ' - ' + f$(x.p) + ' - ' + buyUrl(x)).join('\n'); try {await navigator.clipboard.writeText(t); $('mm').textContent = 'Copied to clipboard.'} catch (e) {$('mm').textContent = 'Copy failed. Select the links above instead.'}};
 const pick = s => {if (s == SEX && RIG) return; $('gm').classList.toggle('on', s == 'male'); $('gf').classList.toggle('on', s == 'female'); loadModel(s)};
 $('gm').onclick = () => pick('male'); $('gf').onclick = () => pick('female');
+$('ps').innerHTML = POSES.map(([k, l]) => '<option value="' + k + '">' + l + '</option>').join(''); $('ps').onchange = e => {POSE = e.target.value; loadModel(SEX)};
 
 /* ---------- body sliders (independent) ---------- */
 let HS = 178, WT = 72;
 function apply() {
  HF = HS / 178; man.scale.setScalar(HF);                    // height only: uniform scale, so rigid gear is never warped
  BW = WT >= 72 ? 1 + .15 * (WT - 72) / 78 : 1 - .15 * (72 - WT) / 27; BWm = BW / HF;   // 45 kg = 0.85, 72 kg = 1.00, 150 kg = 1.15       // weight only: thickness on x/z, independent of height
- gear.scale.setScalar(GS); cg.scale.set(BWm * GS, GS, BWm * GS);                                 // fabric carrier follows body thickness
+                                  // fabric carrier follows body thickness
  const inch = Math.round(HS / 2.54); $('hv').textContent = HS + " cm / " + Math.floor(inch / 12) + "\u2032" + (inch % 12) + "\u2033"; $('wv').textContent = WT + " kg / " + Math.round(WT * 2.2046) + " lb"; rs(); layout();
 }
 $('hs').oninput = e => {HS = +e.target.value; apply()}; $('ws').oninput = e => {WT = +e.target.value; apply()};
