@@ -267,7 +267,6 @@ function onModel(gltf) {
  $('status').textContent = NOTE || (anims.length || !bones.length ? HINT : 'No animation found in this file, showing its default pose'); NOTE = '';
  apply(); build(); attachGear();
 }
-}
 let gltfLoader = null;
 function loadModel(sex) {
  if (!gltfLoader) gltfLoader = new T.GLTFLoader();
