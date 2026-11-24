@@ -259,10 +259,11 @@ function onModel(gltf) {
  const mi = man.matrixWorld.clone().invert();
  ['head', 'spine2', 'lefthand', 'righthand', 'lefthandmiddle1', 'righthandmiddle1', 'lefthandthumb1', 'righthandthumb1'].forEach(k => {if (BM[k]) RESTM[k] = mi.clone().multiply(BM[k].matrixWorld)});
  console.log('Armory360 gear bones found:', Object.keys(RESTM).join(', ') || 'none');
- saved.forEach(([b, p, q, sc]) => {b.position.copy(p); b.quaternion.copy(q); b.scale.copy(sc)});   // back to the file's own pose
- // play the embedded Mixamo clip; root motion on the hips is removed so the character stays in place
+saved.forEach(([b, p, q, sc]) => {b.position.copy(p); b.quaternion.copy(q); b.scale.copy(sc)});   // back to the file's own pose
+ const anims = gltf.animations || [];
  if (anims.length) {
   const clip = anims.slice().sort((a, b) => b.tracks.length - a.tracks.length)[0].clone();
+  clip.tracks = clip.tracks.filter(t => !/\.scale$/i.test(t.name));
   clip.tracks.forEach(t => {if (/hips\.position$/i.test(t.name)) {const v = t.values; for (let i = 3; i < v.length; i += 3) {v[i] = v[0]; v[i + 2] = v[2]}}});
   MIX = new T.AnimationMixer(mdl); MIX.clipAction(clip).play(); MIX.update(0);
   console.log('Armory360 animation:', clip.name, clip.duration.toFixed(2) + 's', clip.tracks.length, 'tracks');
@@ -270,12 +271,11 @@ function onModel(gltf) {
  wr.scale.setScalar(1); man.updateMatrixWorld(true); mdl.updateMatrixWorld(true);
  const b2 = bounds(mdl, false, 6000), s2 = b2.getSize(V(0,0,0)), c2 = b2.getCenter(V(0,0,0));
  if (!b2.isEmpty() && s2.y > 1e-6) {
-  const isProne = /prone/i.test(POSE || '');
+  const isProne = /prone/i.test(typeof POSE !== 'undefined' ? POSE : '');
   MS = (isProne ? TARGET_H * 0.32 : TARGET_H) / s2.y;
   mdl.position.set(-c2.x, -b2.min.y, -c2.z);
  }
  wr.scale.setScalar(MS); man.updateMatrixWorld(true); mdl.updateMatrixWorld(true);
- if (!b2.isEmpty()) {const c = b2.getCenter(V(0,0,0)), iw = wr.matrixWorld.clone().invert(), d = V(-c.x, -b2.min.y, -c.z); d.applyMatrix4(iw).sub(V(0,0,0).applyMatrix4(iw)); mdl.position.add(d); mdl.updateMatrixWorld(true)}
  attachGear();
  $('status').textContent = NOTE || (anims.length || !bones.length ? HINT : 'No animation found in this file, showing its default pose'); NOTE = '';
  apply(); build();
