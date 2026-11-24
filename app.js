@@ -243,24 +243,25 @@ function onModel(gltf) {
  saved.forEach(([b, p, q, sc]) => {b.position.copy(p); b.quaternion.copy(q); b.scale.copy(sc)});
  const anims = gltf.animations || [];
  if (anims.length) {
-const clip = anims.slice().sort((a, b) => b.tracks.length - a.tracks.length)[0].clone();
+  const clip = anims.slice().sort((a, b) => b.tracks.length - a.tracks.length)[0].clone();
   clip.tracks = clip.tracks.filter(t => !/\.scale$/i.test(t.name));
-  clip.tracks.forEach(t => {if (/hips\.position$/i.test(t.name)) {const v = t.values; for (let i = 3; i < v.length; i += 3) {v[i] = v; v[i + 2] = v}}});
+  clip.tracks.forEach(t => {if (/hips\.position$/i.test(t.name)) {const v = t.values; for (let i = 3; i < v.length; i += 3) {v[i] = v[0]; v[i + 2] = v[2]}}});
   MIX = new T.AnimationMixer(mdl); MIX.clipAction(clip).play(); MIX.update(0);
-  console.log('Armory360 animation:', clip.name, clip.duration.toFixed(2) + 's', clip.tracks.length, 'tracks');
- }
- wr.scale.setScalar(1); man.updateMatrixWorld(true); mdl.updateMatrixWorld(true);
- const b2 = bounds(mdl, false, 6000), s2 = b2.getSize(V(0,0,0));
- if (!b2.isEmpty() && Math.max(s2.y, s2.z) > 1e-6) {
-  const isProne = /^p(firing|reload)/i.test(POSE) || s2.z > s2.y * 1.4;
-  MS = (isProne ? TARGET_H * 0.96 : TARGET_H) / Math.max(s2.y, s2.z);
- }
- wr.scale.setScalar(MS); man.updateMatrixWorld(true); mdl.updateMatrixWorld(true);
- const b3 = bounds(mdl, false, 6000);
- if (!b3.isEmpty()) {
-  const c3 = b3.getCenter(V(0,0,0)), iw = wr.matrixWorld.clone().invert();
-  const d = V(-c3.x, -b3.min.y, -c3.z).applyMatrix4(iw).sub(V(0,0,0).applyMatrix4(iw));
-  mdl.position.add(d); mdl.updateMatrixWorld(true);
+  mdl.position.set(0, 0, 0); wr.scale.setScalar(1); man.updateMatrixWorld(true); mdl.updateMatrixWorld(true);
+  const b2 = bounds(mdl, true), s2 = b2.getSize(V(0,0,0));
+  if (!b2.isEmpty() && Math.max(s2.y, s2.z) > 1e-6) {
+   const isProne = /^p(firing|reload)/i.test(POSE) || s2.z > s2.y * 1.4;
+   MS = (isProne ? TARGET_H * 0.96 : TARGET_H) / Math.max(s2.y, s2.z);
+  }
+  wr.scale.setScalar(MS); man.updateMatrixWorld(true); mdl.updateMatrixWorld(true);
+  const b3 = bounds(mdl, true);
+  if (!b3.isEmpty()) {
+   const c3 = b3.getCenter(V(0,0,0)), iw = wr.matrixWorld.clone().invert();
+   const d = V(-c3.x, -b3.min.y, -c3.z).applyMatrix4(iw).sub(V(0,0,0).applyMatrix4(iw));
+   mdl.position.add(d); mdl.updateMatrixWorld(true);
+  }
+ } else {
+  wr.scale.setScalar(MS); man.updateMatrixWorld(true); mdl.updateMatrixWorld(true);
  }
  const mi = man.matrixWorld.clone().invert();
  ['head', 'spine2', 'lefthand', 'righthand', 'lefthandmiddle1', 'righthandmiddle1', 'lefthandthumb1', 'righthandthumb1'].forEach(k => {if (BM[k]) RESTM[k] = mi.clone().multiply(BM[k].matrixWorld)});
