@@ -523,8 +523,6 @@ loadCatalog().then(() => {addGuns(); CART = CART.map(String).filter(id => byId(i
  b.onclick = () => {const n = cur() == 'light' ? 'dark' : 'light'; r.dataset.theme = n; try {localStorage.setItem('a360theme', n)} catch (e) {} paint()};
  paint();
 })();
-</script>
-<script>
 (function () {
  const CONTACT_EMAIL = '', CONTACT_ENDPOINT = '';   // set ONE later: CONTACT_EMAIL = 'you@yourdomain.com' (opens the visitor's mail app), or CONTACT_ENDPOINT = a form service URL such as Formspree (sends directly)
  const $ = id => document.getElementById(id), st = $('cx');
@@ -550,7 +548,6 @@ loadCatalog().then(() => {addGuns(); CART = CART.map(String).filter(id => byId(i
   } else {say('The contact form is not connected yet, so this message was not sent.', 'err')}
  });
 })();
-</script><script>
 (function () {   // dropdowns: hover on desktop, click/tap or keyboard everywhere; Esc or an outside click closes them
  const closeAll = keep => document.querySelectorAll('.dm.open,.sm.open').forEach(x => {if (!keep || !x.contains(keep)) {x.classList.remove('open'); const b = x.querySelector(':scope > button'); if (b) b.setAttribute('aria-expanded', 'false')}});
  document.addEventListener('click', e => {
