@@ -203,7 +203,7 @@ const POSES = [['idle', 'Idle'], ['firing', 'Firing Rifle'], ['strafe', 'Strafe 
 const FILES = {
  male:{idle:'male', firing:'male_firing_rifle', strafe:'male_strafe_right', pistol:'male_pistol_idle', grenade:'male_grenade_throw', reload:'male_reload', pfiring:'male_prone_firing_rifle', preload:'male_prone_reload'},
  female:{idle:'female', firing:'female_firing_rifle', strafe:'female_strafe_right', pistol:'female_pistol_idle', grenade:'female_grenade_throw', reload:'female_reloading', pfiring:'female_prone_firing_rifle', preload:'female_prone_reloading'}};
-const bname = n => strip(n).replace(/^mixamorig/, '').replace(/_\d+$/, '');   // "mixamorigLeftHand_011" -> "lefthand"
+const bname = n => strip(n).replace(/.*mixamorig\d*/, '').replace(/_\d+$/, '');
 function chainLen(mdl) {   // total length of the spine and leg bone chains in the model's own frame; rotation does not change it, a scale difference does
  mdl.updateMatrixWorld(true); const inv = mdl.matrixWorld.clone().invert(), p = k => BM[k] ? BM[k].getWorldPosition(V(0,0,0)).applyMatrix4(inv) : null; let L = 0;
  [['hips', 'spine', 'spine1', 'spine2', 'neck', 'head'], ['leftupleg', 'leftleg', 'leftfoot'], ['rightupleg', 'rightleg', 'rightfoot']].forEach(c => {for (let i = 0; i + 1 < c.length; i++) {const a = p(c[i]), b = p(c[i + 1]); if (a && b) L += a.distanceTo(b)}});
@@ -254,24 +254,21 @@ function onModel(gltf) {
  if (ok && /[?&]slim=/.test(location.search)) try {slimMesh(mdl, bb, ct, sz, SEX == 'female' ? .155 : .17, SEX == 'female' ? .115 : .125, +new URLSearchParams(location.search).get('slim') || 1)} catch (err) {console.warn('Armory360: slimming skipped', err)}   // opt-in: it works in world space, so it is only right for upright poses
  if (!ok) {console.warn('Armory360: could not measure model, using scale 1'); MS = 1} else {MS = TARGET_H / sz.y; mdl.position.x -= ct.x; mdl.position.z -= ct.z; mdl.position.y -= bb.min.y}
  console.log('Armory360 model size (units):', sz.x.toFixed(3), sz.y.toFixed(3), sz.z.toFixed(3), 'scale:', MS, 'bones:', bones.length);
- wr.add(mdl); RIG = mdl; wr.scale.setScalar(MS); man.updateMatrixWorld(true);
- const mi = man.matrixWorld.clone().invert();
- ['head', 'spine2', 'lefthand', 'righthand', 'lefthandmiddle1', 'righthandmiddle1', 'lefthandthumb1', 'righthandthumb1'].forEach(k => {if (BM[k]) RESTM[k] = mi.clone().multiply(BM[k].matrixWorld)});
- console.log('Armory360 gear bones found:', Object.keys(RESTM).join(', ') || 'none');
-saved.forEach(([b, p, q, sc]) => {b.position.copy(p); b.quaternion.copy(q); b.scale.copy(sc)});   // back to the file's own pose
+ wr.add(mdl); RIG = mdl;
+ saved.forEach(([b, p, q, sc]) => {b.position.copy(p); b.quaternion.copy(q); b.scale.copy(sc)});
  const anims = gltf.animations || [];
  if (anims.length) {
-  const clip = anims.slice().sort((a, b) => b.tracks.length - a.tracks.length)[0].clone();
+  const clip = anims.slice().sort((a, b) => b.tracks.length - a.tracks.length).clone();
   clip.tracks = clip.tracks.filter(t => !/\.scale$/i.test(t.name));
-  clip.tracks.forEach(t => {if (/hips\.position$/i.test(t.name)) {const v = t.values; for (let i = 3; i < v.length; i += 3) {v[i] = v[0]; v[i + 2] = v[2]}}});
+  clip.tracks.forEach(t => {if (/hips\.position$/i.test(t.name)) {const v = t.values; for (let i = 3; i < v.length; i += 3) {v[i] = v; v[i + 2] = v}}});
   MIX = new T.AnimationMixer(mdl); MIX.clipAction(clip).play(); MIX.update(0);
   console.log('Armory360 animation:', clip.name, clip.duration.toFixed(2) + 's', clip.tracks.length, 'tracks');
  }
  wr.scale.setScalar(1); man.updateMatrixWorld(true); mdl.updateMatrixWorld(true);
  const b2 = bounds(mdl, false, 6000), s2 = b2.getSize(V(0,0,0));
- if (!b2.isEmpty() && s2.y > 1e-6) {
-  const isProne = /prone/i.test(typeof POSE !== 'undefined' ? POSE : '');
-  MS = (isProne ? TARGET_H * 0.32 : TARGET_H) / s2.y;
+ if (!b2.isEmpty() && Math.max(s2.y, s2.z) > 1e-6) {
+  const isProne = /^p(firing|reload)/i.test(POSE) || s2.z > s2.y * 1.4;
+  MS = (isProne ? TARGET_H * 0.96 : TARGET_H) / Math.max(s2.y, s2.z);
  }
  wr.scale.setScalar(MS); man.updateMatrixWorld(true); mdl.updateMatrixWorld(true);
  const b3 = bounds(mdl, false, 6000);
@@ -280,8 +277,12 @@ saved.forEach(([b, p, q, sc]) => {b.position.copy(p); b.quaternion.copy(q); b.sc
   const d = V(-c3.x, -b3.min.y, -c3.z).applyMatrix4(iw).sub(V(0,0,0).applyMatrix4(iw));
   mdl.position.add(d); mdl.updateMatrixWorld(true);
  }
+ const mi = man.matrixWorld.clone().invert();
+ ['head', 'spine2', 'lefthand', 'righthand', 'lefthandmiddle1', 'righthandmiddle1', 'lefthandthumb1', 'righthandthumb1'].forEach(k => {if (BM[k]) RESTM[k] = mi.clone().multiply(BM[k].matrixWorld)});
+ console.log('Armory360 gear bones found:', Object.keys(RESTM).join(', ') || 'none');
  $('status').textContent = NOTE || (anims.length || !bones.length ? HINT : 'No animation found in this file, showing its default pose'); NOTE = '';
- apply(); build();
+ apply(); build(); attachGear();
+}
 }
 const gltfLoader = new T.GLTFLoader();
 function loadModel(sex) {
