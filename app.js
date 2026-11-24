@@ -170,31 +170,39 @@ function bindPose(mdl, sm) {
 }
 const POSES = [['idle', 'Idle'], ['firing', 'Firing Rifle'], ['strafe', 'Strafe Right'], ['pistol', 'Pistol Idle'], ['grenade', 'Grenade Throw'], ['reload', 'Reloading'], ['pfiring', 'Prone Firing Rifle'], ['preload', 'Prone Reloading']];
 const FILES = {
- male:{idle:'male', firing:'male_firing_rifle', strafe:'male_strafe_right', pistol:'male_pistol_idle', grenade:'male_grenade_throw', reload:'male_reload', pfiring:'male_prone_firing_rifle', preload:'male_prone_reload'},
- female:{idle:'female', firing:'female_firing_rifle', strafe:'female_strafe_right', pistol:'female_pistol_idle', grenade:'female_grenade_throw', reload:'female_reloading', pfiring:'female_prone_firing_rifle', preload:'female_prone_reloading'}};
+ male:{idle:'male', ridle:'male_rifle_idle', firing:'male_firing_rifle', strafe:'male_strafe_right', pistol:'male_pistol_idle', grenade:'male_grenade_throw', reload:'male_reload', pfiring:'male_prone_firing_rifle', preload:'male_prone_reload'},
+ female:{idle:'female', ridle:'female_rifle_idle', firing:'female_firing_rifle', strafe:'female_strafe_right', pistol:'female_pistol_idle', grenade:'female_grenade_throw', reload:'female_reloading', pfiring:'female_prone_firing_rifle', preload:'female_prone_reloading'}
+};
+let DOM_HAND = 'right', HELD = 'primary';
+if ($('hr')) $('hr').onclick = () => {DOM_HAND = 'right'; $('hr').classList.add('on'); $('hl').classList.remove('on'); attachGear()};
+if ($('hl')) $('hl').onclick = () => {DOM_HAND = 'left'; $('hl').classList.add('on'); $('hr').classList.remove('on'); attachGear()};
+if ($('wp')) $('wp').onchange = e => {HELD = e.target.value; build(); attachGear(); if (POSE == 'idle') loadModel(SEX)};
 const bname = n => strip(n).replace(/.*mixamorig\d*/, '').replace(/_\d+$/, '');
-function chainLen(mdl) {   // total length of the spine and leg bone chains in the model's own frame; rotation does not change it, a scale difference does
+function chainLen(mdl) {
  mdl.updateMatrixWorld(true); const inv = mdl.matrixWorld.clone().invert(), p = k => BM[k] ? BM[k].getWorldPosition(V(0,0,0)).applyMatrix4(inv) : null; let L = 0;
  [['hips', 'spine', 'spine1', 'spine2', 'neck', 'head'], ['leftupleg', 'leftleg', 'leftfoot'], ['rightupleg', 'rightleg', 'rightfoot']].forEach(c => {for (let i = 0; i + 1 < c.length; i++) {const a = p(c[i]), b = p(c[i + 1]); if (a && b) L += a.distanceTo(b)}});
  return L;
 }
 function attachGear() {
- // Gear is authored for an upright 1.86 figure (units scaled by GS). Each group is placed once against the bind-pose bone transforms, then parented to its bone so it follows every animation frame.
- const P = k => RESTM[k] ? V(0,0,0).setFromMatrixPosition(RESTM[k]) : null, hd = P('head'), sp = P('spine2'), rh = P('righthand'), mid = P('righthandmiddle1'), th = P('righthandthumb1'), I = new T.Quaternion();
+ const P = k => RESTM[k] ? V(0,0,0).setFromMatrixPosition(RESTM[k]) : null, hd = P('head'), sp = P('spine2'), I = new T.Quaternion();
  const comp = (pos, q, sc) => new T.Matrix4().compose(pos, q, V(sc, sc, sc));
- const put = (grp, key, M) => {const b = BM[key]; grp.matrixAutoUpdate = false; if (b && RESTM[key]) {grp.matrix.copy(RESTM[key].clone().invert().multiply(M)); b.add(grp)} else {grp.matrix.copy(M); man.add(grp); console.warn('Armory360: bone not found for', key, '(gear stays fixed)')} grp.matrixWorldNeedsUpdate = true};
- const c0 = V(0, 1.752, -.005), hc = hd ? hd.clone().add(V(0, .085, .012)) : V(0, 1.67, .01);   // helmet centre in gear units -> a point just above the head bone
+ const put = (grp, key, M) => {const b = BM[key]; grp.matrixAutoUpdate = false; if (b && RESTM[key]) {grp.matrix.copy(RESTM[key].clone().invert().multiply(M)); b.add(grp)} else {grp.matrix.copy(M); man.add(grp)} grp.matrixWorldNeedsUpdate = true};
+ const c0 = V(0, 1.752, -.005), hc = hd ? hd.clone().add(V(0, .085, .012)) : V(0, 1.67, .01);
  put(HGRP, 'head', comp(hc.clone().sub(c0.clone().multiplyScalar(GS)), I, GS));
- const ch = V(0, 1.3, 0), cc = sp ? sp.clone().add(V(0, -.055, 0)) : V(0, 1.27, 0);   // plate centre -> a point just below the chest bone
+ const ch = V(0, 1.3, 0), cc = sp ? sp.clone().add(V(0, -.055, 0)) : V(0, 1.27, 0);
  put(cg, 'spine2', comp(cc.clone().sub(ch.clone().multiplyScalar(GS)), I, GS));
- // rifle: barrel along the right hand's finger direction, rifle "up" toward the thumb side, pistol grip at the palm
- let f = V(-1, 0, 0), t = V(0, 0, 1), hp = V(-.4, 1.45, 0);
+ RGRP.visible = HELD !== 'none';
+ const isRifle = HELD === 'primary';
+ const handSide = isRifle ? (DOM_HAND === 'right' ? 'left' : 'right') : DOM_HAND;
+ const hKey = handSide + 'hand', mKey = handSide + 'handmiddle1', tKey = handSide + 'handthumb1';
+ const rh = P(hKey), mid = P(mKey), th = P(tKey);
+ let f = V(handSide === 'right' ? -1 : 1, 0, 0), t = V(0, 0, 1), hp = V(handSide === 'right' ? -.4 : .4, 1.45, 0);
  if (rh && mid) {f = mid.clone().sub(rh).normalize(); hp = rh.clone(); if (th) {const t0 = th.clone().sub(rh); t = t0.sub(f.clone().multiplyScalar(t0.dot(f))).normalize()}}
  const y = t, z = f, x = y.clone().cross(z).normalize(), q = new T.Quaternion().setFromRotationMatrix(new T.Matrix4().makeBasis(x, y, z)), up = new URLSearchParams(location.search);
- const nums = (k, n) => (up.get(k) || '').split(',').map(Number).concat(Array(n).fill(0)).slice(0, n).map(v => v || 0), rr = nums('rrot', 3), rp = nums('rpos', 3);   // ?rrot=deg,deg,deg and ?rpos=x,y,z (rifle-local) tune the hold
+ const nums = (k, n) => (up.get(k) || '').split(',').map(Number).concat(Array(n).fill(0)).slice(0, n).map(v => v || 0), rr = nums('rrot', 3), rp = nums('rpos', 3);
  q.multiply(new T.Quaternion().setFromEuler(new T.Euler(rr[0] * Math.PI / 180, rr[1] * Math.PI / 180, rr[2] * Math.PI / 180)));
  const s = .78 * GS, pg = V(0, -.09, -.105), grip = hp.clone().add(f.clone().multiplyScalar(.05));
- put(RGRP, 'righthand', comp(grip.sub(pg.multiplyScalar(s).applyQuaternion(q)).add(V(rp[0], rp[1], rp[2]).applyQuaternion(q)), q, s));
+ put(RGRP, hKey, comp(grip.sub(pg.multiplyScalar(s).applyQuaternion(q)).add(V(rp[0], rp[1], rp[2]).applyQuaternion(q)), q, s));
 }
 function onModel(gltf) {
  clearModel();
@@ -257,9 +265,12 @@ function onModel(gltf) {
 let gltfLoader = null;
 function loadModel(sex) {
  if (!gltfLoader) gltfLoader = new T.GLTFLoader();
- const t = ++LT, url = './' + FILES[sex][POSE] + '.glb'; SEX = sex; $('status').textContent = 'Loading 3D model…';
+ const useRidle = POSE == 'idle' && S.rifle != null && HELD === 'primary' && FILES[sex].ridle;
+ const key = useRidle ? 'ridle' : POSE;
+ const t = ++LT, url = './' + FILES[sex][key] + '.glb'; SEX = sex; $('status').textContent = 'Loading 3D model…';
  gltfLoader.load(url, g => {if (t == LT) onModel(g)}, undefined, () => {
   if (t != LT) return;
+  if (key == 'ridle') {gltfLoader.load('./' + FILES[sex].idle + '.glb', g => {if (t == LT) onModel(g)}); return}
   if (POSE != 'idle') {NOTE = url + ' not found, showing the idle pose'; POSE = 'idle'; $('ps').value = 'idle'; loadModel(sex); return}
   NOTE = url + ' not found, showing placeholder'; onModel({scene:dummy(), animations:[]});
  });
