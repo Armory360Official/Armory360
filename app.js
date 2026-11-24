@@ -552,3 +552,4 @@ loadCatalog().then(() => {addGuns(); CART = CART.map(String).filter(id => byId(i
   const c = e.target.closest('.c3'); if (c) {closeAll(); const nv = document.querySelector('.mainnav'); nv.classList.add('shut'); nv.addEventListener('mouseleave', () => nv.classList.remove('shut'), {once:true}); document.dispatchEvent(new CustomEvent('a360sub', {detail:c.dataset.sub}))}
  });
 })();
+}
