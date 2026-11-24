@@ -249,7 +249,7 @@ function onModel(gltf) {
  mdl.updateMatrixWorld(true); const Lb = chainLen(mdl);
  {let big = null; mdl.traverse(o => {if (o.isMesh && (!big || o.geometry.attributes.position.count > big.geometry.attributes.position.count)) big = o});
   const sp = new URLSearchParams(location.search).get('skin'), tone = sp ? parseInt(sp.replace('#', ''), 16) : SEX == 'female' ? 0xd9a07f : 0xc68e6e;   // ?skin=c8906e forces a color
-  if (big) (Array.isArray(big.material) ? big.material : [big.material]).forEach(m => {const c = m.color; if (c && !m.map && !m.vertexColors && (sp || Math.max(c.r, c.g, c.b) - Math.min(c.r, c.g, c.b) < .08)) {m.color.set(tone); m.needsUpdate = true; console.log('Armory360 skin tone applied to', big.name || '(unnamed mesh)')}})}
+  if (big) {big.geometry.deleteAttribute('color'); (Array.isArray(big.material) ? big.material : [big.material]).forEach(m => {m.map = null; m.vertexColors = false; m.color.set(tone); m.needsUpdate = true;})}}
  const bb = bounds(mdl, true), sz = bb.getSize(V(0,0,0)), ct = bb.getCenter(V(0,0,0)), ok = !bb.isEmpty() && sz.y > 1e-6;
  if (ok && /[?&]slim=/.test(location.search)) try {slimMesh(mdl, bb, ct, sz, SEX == 'female' ? .155 : .17, SEX == 'female' ? .115 : .125, +new URLSearchParams(location.search).get('slim') || 1)} catch (err) {console.warn('Armory360: slimming skipped', err)}   // opt-in: it works in world space, so it is only right for upright poses
  if (!ok) {console.warn('Armory360: could not measure model, using scale 1'); MS = 1} else {MS = TARGET_H / sz.y; mdl.position.x -= ct.x; mdl.position.z -= ct.z; mdl.position.y -= bb.min.y}
@@ -268,14 +268,18 @@ saved.forEach(([b, p, q, sc]) => {b.position.copy(p); b.quaternion.copy(q); b.sc
   console.log('Armory360 animation:', clip.name, clip.duration.toFixed(2) + 's', clip.tracks.length, 'tracks');
  }
  wr.scale.setScalar(1); man.updateMatrixWorld(true); mdl.updateMatrixWorld(true);
- const b2 = bounds(mdl, false, 6000), s2 = b2.getSize(V(0,0,0)), c2 = b2.getCenter(V(0,0,0));
+ const b2 = bounds(mdl, false, 6000), s2 = b2.getSize(V(0,0,0));
  if (!b2.isEmpty() && s2.y > 1e-6) {
   const isProne = /prone/i.test(typeof POSE !== 'undefined' ? POSE : '');
-  mdl.position.add(V(-c2.x / MS, -b2.min.y / MS, -c2.z / MS));
-  mdl.position.set(-c2.x, -b2.min.y, -c2.z);
+  MS = (isProne ? TARGET_H * 0.32 : TARGET_H) / s2.y;
  }
  wr.scale.setScalar(MS); man.updateMatrixWorld(true); mdl.updateMatrixWorld(true);
- attachGear();
+ const b3 = bounds(mdl, false, 6000);
+ if (!b3.isEmpty()) {
+  const c3 = b3.getCenter(V(0,0,0)), iw = wr.matrixWorld.clone().invert();
+  const d = V(-c3.x, -b3.min.y, -c3.z).applyMatrix4(iw).sub(V(0,0,0).applyMatrix4(iw));
+  mdl.position.add(d); mdl.updateMatrixWorld(true);
+ }
  $('status').textContent = NOTE || (anims.length || !bones.length ? HINT : 'No animation found in this file, showing its default pose'); NOTE = '';
  apply(); build();
 }
