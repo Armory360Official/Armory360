@@ -253,7 +253,6 @@ function onModel(gltf) {
  const bb = bounds(mdl, true), sz = bb.getSize(V(0,0,0)), ct = bb.getCenter(V(0,0,0)), ok = !bb.isEmpty() && sz.y > 1e-6;
  if (ok && /[?&]slim=/.test(location.search)) try {slimMesh(mdl, bb, ct, sz, SEX == 'female' ? .155 : .17, SEX == 'female' ? .115 : .125, +new URLSearchParams(location.search).get('slim') || 1)} catch (err) {console.warn('Armory360: slimming skipped', err)}   // opt-in: it works in world space, so it is only right for upright poses
  if (!ok) {console.warn('Armory360: could not measure model, using scale 1'); MS = 1} else {MS = TARGET_H / sz.y; mdl.position.x -= ct.x; mdl.position.z -= ct.z; mdl.position.y -= bb.min.y}
- try {if (ok) addUnderwear(mdl, sz)} catch (err) {console.warn('Armory360: underwear skipped', err)}
  console.log('Armory360 model size (units):', sz.x.toFixed(3), sz.y.toFixed(3), sz.z.toFixed(3), 'scale:', MS, 'bones:', bones.length);
  wr.add(mdl); RIG = mdl; wr.scale.setScalar(MS); man.updateMatrixWorld(true);
  const mi = man.matrixWorld.clone().invert();
