@@ -294,8 +294,10 @@ function loadModel(sex) {
  });
 }
 
-function layout() {wr.scale.set(MS * BWm, MS, MS * BWm)}   // weight = thickness on x/z, height = uniform scale on the whole figure
-
+function layout() {
+ const pr = /^p(firing|reload)/i.test(POSE);
+ wr.scale.set(MS * BWm, MS * (pr ? BWm : 1), MS * (pr ? 1 : BWm));
+}
 /* ---------- gear ---------- */
 function setGlove(gv) {   // gloves are small shells on the hand bones, sized from the measured hand length
  GL.forEach(g => g.parent && g.parent.remove(g)); GL = [];
