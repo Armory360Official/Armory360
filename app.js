@@ -233,11 +233,11 @@ function onModel(gltf) {
   clip.tracks.forEach(t => {if (/hips\.position$/i.test(t.name)) {const v = t.values; for (let i = 3; i < v.length; i += 3) {v[i] = v[0]; v[i + 2] = v[2]}}});
   MIX = new T.AnimationMixer(mdl); MIX.clipAction(clip).play(); MIX.update(0);
   mdl.position.set(0, 0, 0); wr.scale.setScalar(1); man.updateMatrixWorld(true); mdl.updateMatrixWorld(true);
-  const b2 = bounds(mdl, true), s2 = b2.getSize(V(0,0,0));
-  if (!b2.isEmpty() && Math.max(s2.y, s2.z) > 1e-6) {
-   const isProne = /^p(firing|reload)/i.test(POSE) || s2.z > s2.y * 1.4;
-   MS = (isProne ? TARGET_H * 0.96 : TARGET_H) / Math.max(s2.y, s2.z);
-  }
+ const b2 = bounds(mdl, true), s2 = b2.getSize(V(0,0,0)), Lnow = chainLen(mdl);
+ if (!b2.isEmpty() && Math.max(s2.y, s2.z) > 1e-6) {
+  const isProne = /^p(firing|reload)/i.test(POSE) || s2.z > s2.y * 1.4;
+  MS = Lnow > 1e-6 ? (TARGET_H * 1.42) / Lnow : (isProne ? TARGET_H * 1.16 : TARGET_H) / Math.max(s2.y, s2.z);
+ }
   wr.scale.setScalar(MS); man.updateMatrixWorld(true); mdl.updateMatrixWorld(true);
   const b3 = bounds(mdl, true);
   if (!b3.isEmpty()) {
