@@ -237,12 +237,13 @@ function onModel(gltf) {
  const bb = bounds(mdl, true), sz = bb.getSize(V(0,0,0)), ct = bb.getCenter(V(0,0,0)), ok = !bb.isEmpty() && sz.y > 1e-6;
  if (ok && /[?&]slim=/.test(location.search)) try {slimMesh(mdl, bb, ct, sz, SEX == 'female' ? .155 : .17, SEX == 'female' ? .115 : .125, +new URLSearchParams(location.search).get('slim') || 1)} catch (err) {console.warn('Armory360: slimming skipped', err)}   // opt-in: it works in world space, so it is only right for upright poses
  if (!ok) {console.warn('Armory360: could not measure model, using scale 1'); MS = 1} else {MS = TARGET_H / sz.y; mdl.position.x -= ct.x; mdl.position.z -= ct.z; mdl.position.y -= bb.min.y}
+ try {if (ok) addUnderwear(mdl, sz)} catch (err) {console.warn('Armory360: underwear skipped', err)}
  console.log('Armory360 model size (units):', sz.x.toFixed(3), sz.y.toFixed(3), sz.z.toFixed(3), 'scale:', MS, 'bones:', bones.length);
  wr.add(mdl); RIG = mdl;
  saved.forEach(([b, p, q, sc]) => {b.position.copy(p); b.quaternion.copy(q); b.scale.copy(sc)});
  const anims = gltf.animations || [];
  if (anims.length) {
-  const clip = anims.slice().sort((a, b) => b.tracks.length - a.tracks.length).clone();
+const clip = anims.slice().sort((a, b) => b.tracks.length - a.tracks.length)[0].clone();
   clip.tracks = clip.tracks.filter(t => !/\.scale$/i.test(t.name));
   clip.tracks.forEach(t => {if (/hips\.position$/i.test(t.name)) {const v = t.values; for (let i = 3; i < v.length; i += 3) {v[i] = v; v[i + 2] = v}}});
   MIX = new T.AnimationMixer(mdl); MIX.clipAction(clip).play(); MIX.update(0);
