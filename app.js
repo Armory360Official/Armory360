@@ -136,44 +136,29 @@ function slimMesh(mdl, bb, ct, sz, tw, td, mul) {
   m.customProgramCacheKey = () => 'slim'; m.needsUpdate = true;
  }));
 }
-function addUnderwear(mdl, sz) {
- // Separate skinned garment meshes built from the body's own faces, lifted a few mm off the skin, with a fabric material, a thicker trim at the hems
- // and no change to the body mesh. They share the body's skeleton and slimming, so they deform with it. Region heights are estimated from body proportions.
+function addUnderwear() {
  if (/[?&]under=0/.test(location.search)) return;
- const ms = []; mdl.traverse(o => {if (o.isSkinnedMesh && o.skeleton && o.geometry.index && o.geometry.attributes.normal && typeof o.boneTransform == 'function') ms.push(o)});
- const H = sz.y, v = V(0,0,0); mdl.updateMatrixWorld(true);
- const ext = o => {let lo = 1e9, hi = -1e9, n = o.geometry.attributes.position.count, st = Math.max(1, Math.floor(n / 1500)); for (let i = 0; i < n; i += st) {v.set(0,0,0); o.boneTransform(i, v).applyMatrix4(o.matrixWorld); lo = Math.min(lo, v.y); hi = Math.max(hi, v.y)} return hi - lo};
- let body = null, be = 0; ms.forEach(o => {const e = ext(o); if (e > be) {be = e; body = o}});
- if (!body || be < H * .6) {console.warn('Armory360: no full-body mesh found, no underwear added'); return}
- const g = body.geometry, n = g.attributes.position.count, Rx = new Float32Array(n), Ry = new Float32Array(n), Rz = new Float32Array(n);
- for (let i = 0; i < n; i++) {v.set(0,0,0); body.boneTransform(i, v).applyMatrix4(body.matrixWorld); Rx[i] = v.x; Ry[i] = v.y; Rz[i] = v.z}
- let cf = 9, bz = -9, by = .72;   // crotch height (lowest point on the centre line above the knees) and bust height (most forward point of the chest)
- for (let i = 0; i < n; i++) {const fy = Ry[i] / H, ax = Math.abs(Rx[i]) / H; if (ax < .012 && fy > .3 && fy < .6 && fy < cf) cf = fy; if (ax < .1 && fy > .64 && fy < .8 && Rz[i] / H > bz) {bz = Rz[i] / H; by = fy}}
- cf = cf == 9 ? .46 : cl(cf, .42, .5); by = cl(by, .66, .78);
- console.log('Armory360 underwear landmarks (fractions of height): crotch', cf.toFixed(3), 'bust', by.toFixed(3), 'body mesh', body.name || '(unnamed)');
- const fem = SEX == 'female', top = cf + (fem ? .095 : .105), ylo = ax => Math.min(cf + .07, cf - .005 + .86 * Math.max(0, ax - .02));
- const specs = fem ? [
-  {inc:(y, a) => a < .17 && y > ylo(a) && y < top, trim:(y, a) => y > top - .013 || y < ylo(a) + .012, col:0x2a2d33, tc:0x464b55},
-  {inc:(y, a, z) => (a < .115 && y > by - .052 && y < by - .02) || (z > -.004 && a > .012 && a < .115 && y > by - .052 && y < by + .045) || (a > .05 && a < .068 && y > by + .045 && y < by + .118), trim:(y, a, z) => y < by - .04 || (y > by + .033 && y < by + .046), col:0x2a2d33, tc:0x464b55}
- ] : [{inc:(y, a) => a < .17 && y > cf - .065 && y < top, trim:(y, a) => y > top - .014 || y < cf - .053, col:0x2d3446, tc:0x434b60}];
- const gi = g.index.array, bm = Array.isArray(body.material) ? body.material[0] : body.material;
- const A = V(0,0,0), Bv = V(0,0,0); let a0 = 0, a1 = 0; for (let i = 0; i < n; i++) {if (Ry[i] < Ry[a0]) a0 = i; if (Ry[i] > Ry[a1]) a1 = i}
- A.fromBufferAttribute(g.attributes.position, a0); Bv.fromBufferAttribute(g.attributes.position, a1);
- const d = .0022 * H / (Math.hypot(Rx[a1] - Rx[a0], Ry[a1] - Ry[a0], Rz[a1] - Rz[a0]) / (A.distanceTo(Bv) || 1));   // lift in bind-space units (about 4 mm on a 1.8 m body)
- const ft = TXW.clone(); ft.needsUpdate = true; ft.repeat.set(40, 40);
- specs.forEach(sp => {
-  const sel = []; for (let t = 0; t < gi.length; t += 3) {const a = gi[t], b = gi[t + 1], c = gi[t + 2]; if (sp.inc((Ry[a] + Ry[b] + Ry[c]) / 3 / H, Math.abs(Rx[a] + Rx[b] + Rx[c]) / 3 / H, (Rz[a] + Rz[b] + Rz[c]) / 3 / H)) sel.push(a, b, c)}
-  if (sel.length < 90) {console.warn('Armory360: garment region too small, skipped', sel.length); return}
-  const G = new T.BufferGeometry(), P = g.attributes.position.clone(), N = g.attributes.normal, C = new Float32Array(n * 3), c1 = new T.Color(sp.col), c2 = new T.Color(sp.tc);
-  for (const k of ['skinIndex', 'skinWeight', 'uv', 'slimK']) if (g.attributes[k]) G.setAttribute(k, g.attributes[k]);
-  for (let i = 0; i < n; i++) {const tr = sp.trim(Ry[i] / H, Math.abs(Rx[i]) / H, Rz[i] / H), m = d * (tr ? 1.9 : 1), c = tr ? c2 : c1; P.setXYZ(i, P.getX(i) + N.getX(i) * m, P.getY(i) + N.getY(i) * m, P.getZ(i) + N.getZ(i) * m); C[i * 3] = c.r; C[i * 3 + 1] = c.g; C[i * 3 + 2] = c.b}
-  G.setAttribute('position', P); G.setAttribute('normal', N); G.setAttribute('color', new T.BufferAttribute(C, 3)); G.setIndex(sel);
-  const mat = new T.MeshStandardMaterial({vertexColors:true, roughness:.92, metalness:0, bumpMap:ft, bumpScale:1.2, envMapIntensity:.4, polygonOffset:true, polygonOffsetFactor:-2, polygonOffsetUnits:-2});
-  if (G.attributes.slimK) {mat.onBeforeCompile = bm.onBeforeCompile; mat.customProgramCacheKey = bm.customProgramCacheKey}
-  const gm = new T.SkinnedMesh(G, mat); gm.bind(body.skeleton, body.bindMatrix); gm.position.copy(body.position); gm.quaternion.copy(body.quaternion); gm.scale.copy(body.scale);
-  gm.frustumCulled = false; gm.castShadow = true; gm.receiveShadow = true; body.parent.add(gm);
-  console.log('Armory360 garment added:', sel.length / 3, 'triangles');
- });
+ const mt = new T.MeshStandardMaterial({color:0x1f2229, roughness:0.88, metalness:0.02});
+ const hip = BM.hips;
+ if (hip) {
+  const s = hip.getWorldScale(V(0,0,0)).y || 1, k = 1 / s;
+  const band = new T.Mesh(new T.CylinderGeometry(0.168 * k, 0.175 * k, 0.16 * k, 28, 1), mt);
+  band.position.set(0, -0.03 * k, 0.005 * k); band.scale.set(1.06, 1, 0.72);
+  band.castShadow = band.receiveShadow = true; hip.add(band);
+  if (SEX !== 'female') {
+   for (const q of [-1, 1]) {
+    const leg = new T.Mesh(new T.CylinderGeometry(0.088 * k, 0.082 * k, 0.14 * k, 20), mt);
+    leg.position.set(q * 0.088 * k, -0.12 * k, 0.005 * k); leg.scale.set(1, 1, 0.88);
+    leg.castShadow = leg.receiveShadow = true; hip.add(leg);
+   }
+  }
+ }
+ if (SEX === 'female' && BM.spine2) {
+  const s = BM.spine2.getWorldScale(V(0,0,0)).y || 1, k = 1 / s;
+  const bra = new T.Mesh(new T.CylinderGeometry(0.148 * k, 0.142 * k, 0.11 * k, 28), mt);
+  bra.position.set(0, 0.03 * k, 0.012 * k); bra.scale.set(1.08, 1, 0.78);
+  bra.castShadow = bra.receiveShadow = true; BM.spine2.add(bra);
+ }
 }
 function bindPose(mdl, sm) {
  // Put every bone exactly at the pose the skin was bound to (world = inverse of its inverse-bind matrix), so skeleton and mesh agree.
