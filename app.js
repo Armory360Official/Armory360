@@ -261,10 +261,11 @@ function onModel(gltf) {
  console.log('Armory360 gear bones found:', Object.keys(RESTM).join(', ') || 'none');
  saved.forEach(([b, p, q, sc]) => {b.position.copy(p); b.quaternion.copy(q); b.scale.copy(sc)});   // back to the file's own pose
  // play the embedded Mixamo clip; root motion on the hips is removed so the character stays in place
- const anims = gltf.animations || [];
- if (anims.length) {
+if (anims.length) {
   const clip = anims.slice().sort((a, b) => b.tracks.length - a.tracks.length)[0].clone();
+  clip.tracks = clip.tracks.filter(t => !/\.scale$/i.test(t.name));
   clip.tracks.forEach(t => {if (/hips\.position$/i.test(t.name)) {const v = t.values; for (let i = 3; i < v.length; i += 3) {v[i] = v[0]; v[i + 2] = v[2]}}});
+  MIX = new T.AnimationMixer(mdl); MIX.clipAction(clip).play(); MIX.update(0);
   MIX = new T.AnimationMixer(mdl); MIX.clipAction(clip).play(); MIX.update(0);
   console.log('Armory360 animation:', clip.name, clip.duration.toFixed(2) + 's', clip.tracks.length, 'tracks');
  }
