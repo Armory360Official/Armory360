@@ -272,7 +272,7 @@ saved.forEach(([b, p, q, sc]) => {b.position.copy(p); b.quaternion.copy(q); b.sc
  const b2 = bounds(mdl, false, 6000), s2 = b2.getSize(V(0,0,0)), c2 = b2.getCenter(V(0,0,0));
  if (!b2.isEmpty() && s2.y > 1e-6) {
   const isProne = /prone/i.test(typeof POSE !== 'undefined' ? POSE : '');
-  MS = (isProne ? TARGET_H * 0.32 : TARGET_H) / s2.y;
+  mdl.position.add(V(-c2.x / MS, -b2.min.y / MS, -c2.z / MS));
   mdl.position.set(-c2.x, -b2.min.y, -c2.z);
  }
  wr.scale.setScalar(MS); man.updateMatrixWorld(true); mdl.updateMatrixWorld(true);
