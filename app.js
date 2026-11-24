@@ -152,22 +152,6 @@ function addUnderwear(mdl, sz) {
  cf = cf == 9 ? .46 : cl(cf, .42, .5); by = cl(by, .66, .78);
  console.log('Armory360 underwear landmarks (fractions of height): crotch', cf.toFixed(3), 'bust', by.toFixed(3), 'body mesh', body.name || '(unnamed)');
  const fem = SEX == 'female', top = cf + (fem ? .095 : .105), ylo = ax => Math.min(cf + .07, cf - .005 + .86 * Math.max(0, ax - .02));
- if (!fem) {
-  // Paint the area black with a per-vertex field that is interpolated across each triangle, so the edge is a clean line whatever the mesh density; texture is ignored there.
-  const F = new Float32Array(n);
-  for (let i = 0; i < n; i++) {const fy = Ry[i] / H, ax = Math.abs(Rx[i]) / H; F[i] = ax < .17 ? Math.min(fy - (cf - .065), top - fy) : -1}
-  g.setAttribute('paintF', new T.BufferAttribute(F, 1));
-  (Array.isArray(body.material) ? body.material : [body.material]).forEach(m => {
-   const prev = m.onBeforeCompile, pk = m.customProgramCacheKey;
-   m.onBeforeCompile = (sh, r) => {
-    if (prev) prev.call(m, sh, r);
-    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float paintF;\nvarying float vPaint;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvPaint = paintF;');
-    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vPaint;').replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.015), smoothstep(-0.0012, 0.0012, vPaint));');
-   };
-   m.customProgramCacheKey = () => (pk ? pk.call(m) : '') + 'paint'; m.needsUpdate = true;
-  });
-  console.log('Armory360 boxer area painted black on the male body (no garment mesh)'); return;
- }
  const specs = fem ? [
   {inc:(y, a) => a < .17 && y > ylo(a) && y < top, trim:(y, a) => y > top - .013 || y < ylo(a) + .012, col:0x2a2d33, tc:0x464b55},
   {inc:(y, a, z) => (a < .115 && y > by - .052 && y < by - .02) || (z > -.004 && a > .012 && a < .115 && y > by - .052 && y < by + .045) || (a > .05 && a < .068 && y > by + .045 && y < by + .118), trim:(y, a, z) => y < by - .04 || (y > by + .033 && y < by + .046), col:0x2a2d33, tc:0x464b55}
