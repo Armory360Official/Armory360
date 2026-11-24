@@ -516,7 +516,6 @@ document.addEventListener('click', e => {if (!e.target.closest('.sr') || e.targe
 addEventListener('hashchange', () => route());
 loadCatalog().then(() => {addGuns(); CART = CART.map(String).filter(id => byId(id)); renderCart(); renderTiles(); apply(); change(); route(); loadModel('male')});
 }
-</script><script>
 (function () {   // dark/light toggle: follows the device until the visitor picks one, then remembers the choice
  const r = document.documentElement, b = document.getElementById('tg');
  const cur = () => r.dataset.theme || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
