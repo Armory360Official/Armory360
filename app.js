@@ -284,8 +284,9 @@ function onModel(gltf) {
  apply(); build(); attachGear();
 }
 }
-const gltfLoader = new T.GLTFLoader();
+let gltfLoader = null;
 function loadModel(sex) {
+ if (!gltfLoader) gltfLoader = new T.GLTFLoader();
  const t = ++LT, url = './' + FILES[sex][POSE] + '.glb'; SEX = sex; $('status').textContent = 'Loading 3D model…';
  gltfLoader.load(url, g => {if (t == LT) onModel(g)}, undefined, () => {
   if (t != LT) return;
