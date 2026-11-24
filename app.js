@@ -275,7 +275,6 @@ function onModel(gltf) {
   mdl.position.set(-c2.x, -b2.min.y, -c2.z);
  }
  wr.scale.setScalar(MS); man.updateMatrixWorld(true); mdl.updateMatrixWorld(true);
- const b2 = bounds(mdl, false, 6000);
  if (!b2.isEmpty()) {const c = b2.getCenter(V(0,0,0)), iw = wr.matrixWorld.clone().invert(), d = V(-c.x, -b2.min.y, -c.z); d.applyMatrix4(iw).sub(V(0,0,0).applyMatrix4(iw)); mdl.position.add(d); mdl.updateMatrixWorld(true)}
  attachGear();
  $('status').textContent = NOTE || (anims.length || !bones.length ? HINT : 'No animation found in this file, showing its default pose'); NOTE = '';
