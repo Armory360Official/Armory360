@@ -555,12 +555,31 @@ loadCatalog().then(() => {addGuns(); CART = CART.map(String).filter(id => byId(i
 /* ---------- accounts, named builds & sharing ---------- */
 const SB_URL = 'https://supabase.co';
 const SB_KEY = 'sb_publishable_iV_nitvsNXmcstTaqNhKsg_9vEnUogf';
-const sb = window.supabase ? window.supabase.createClient(SB_URL, SB_KEY) : null;
-let USER = null;
+let _sb = null, USER = null;
+function getSb() {
+ if (!_sb && window.supabase) {
+  _sb = window.supabase.createClient(SB_URL, SB_KEY);
+  _sb.auth.onAuthStateChange((_ev, sess) => {
+   USER = sess?.user || null;
+   const ab = document.getElementById('auth-btn'); if (ab) ab.textContent = USER ? 'Log Out' : 'Log In';
+   const bn = document.getElementById('bname'); if (bn) bn.placeholder = USER ? 'Name your loadout...' : 'Name your loadout (Log in required)';
+   refreshSavedList();
+  });
+ }
+ return _sb;
+}
+getSb();
 const showModal = on => {const m = document.getElementById('auth-modal'); if (m) m.style.display = on ? 'flex' : 'none'};
 
 function requireAuth(fn) {
- if (!sb) return alert('Auth loading—refresh and try again.');
+ if (!getSb()) {
+  const s = document.createElement('script');
+  s.src = 'https://unpkg.com';
+  s.onload = () => {getSb(); requireAuth(fn)};
+  s.onerror = () => alert('Could not connect to auth server—check adblocker/tracking prevention.');
+  document.head.appendChild(s);
+  return;
+ }
  if (USER) return fn();
  document.getElementById('auth-msg').textContent = 'Log in or create an account to name, save, or share builds.';
  showModal(true);
