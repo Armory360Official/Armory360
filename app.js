@@ -382,13 +382,15 @@ el.addEventListener('pointermove', e => {
  place();
 });
 const up = e => ptr.delete(e.pointerId); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+let playing = true;
 $('auto').onclick = () => {auto = !auto; ytg = null; $('auto').classList.toggle('on', auto)};
+if ($('play')) $('play').onclick = () => {playing = !playing; $('play').classList.toggle('on', playing); $('play').textContent = playing ? 'Pause pose' : 'Play pose'};
 $('views').querySelectorAll('[data-a]').forEach(b => b.onclick = () => {auto = false; $('auto').classList.remove('on'); yaw = Math.atan2(Math.sin(yaw), Math.cos(yaw)); ytg = -(+b.dataset.a)});
 $('dbg').onclick = async () => {const t = LOGS.join('\n'); try {await navigator.clipboard.writeText(t); $('dbg').textContent = 'Copied!'} catch (e) {prompt('Copy this debug info:', t)} setTimeout(() => $('dbg').textContent = 'Copy debug info', 2000)};
 $('rv').onclick = () => {home(); ytg = 0; place()};
 (function loop() {
  requestAnimationFrame(loop);
- {const dt = clk.getDelta(); if (MIX) MIX.update(dt)}
+ {const dt = clk.getDelta(); if (MIX && playing) MIX.update(dt)}
  if (!ptr.size) {
   if (ytg !== null) {let d = ytg - yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); yaw += d * .12; pitch += (.05 - pitch) * .12; if (Math.abs(d) < .002) ytg = null; place()}
   else if (auto) {yaw -= .006; place()}
@@ -423,7 +425,7 @@ function renderLoadout() {
   : '<div class="empty">Nothing equipped yet. Pick gear from the menu on the left.</div>';
  $('cnt').textContent = p.length + (p.length == 1 ? ' item' : ' items'); $('tot').textContent = f$(p.reduce((a, x) => a + x.p, 0)); $('ht').textContent = $('tot').textContent;
 }
-function change() {renderMenu(); renderLoadout(); build()}
+function change() {renderMenu(); renderLoadout(); build(); if (POSE == 'idle') loadModel(SEX)}
 $('tabs').onclick = e => {const b = e.target.closest('[data-t]'); if (b) {TAB = b.dataset.t; SUB = ''; Q = ''; $('q').value = ''; renderMenu()}};
 const goCat = e => {const b = e.target.closest('[data-t]'); if (b) {TAB = b.dataset.t; SUB = ''; Q = ''; $('q').value = ''; renderMenu()}};
 $('fcat').onclick = goCat; $('tiles').onclick = goCat;
