@@ -551,44 +551,45 @@ loadCatalog().then(() => {addGuns(); CART = CART.map(String).filter(id => byId(i
   const t = e.target.closest('.s3'); if (t) {const g = t.parentElement, o = !g.classList.contains('open'); g.classList.toggle('open', o); t.setAttribute('aria-expanded', String(o)); return}
   const c = e.target.closest('.c3'); if (c) {closeAll(); const nv = document.querySelector('.mainnav'); nv.classList.add('shut'); nv.addEventListener('mouseleave', () => nv.classList.remove('shut'), {once:true}); document.dispatchEvent(new CustomEvent('a360sub', {detail:c.dataset.sub}))}
  });
-})();/* ---------- accounts, named builds & sharing ---------- */
-const SB_URL = 'https://ddocwakcetsiymiecbxg.supabase.co';
+})();
+/* ---------- accounts, named builds & sharing ---------- */
+const SB_URL = 'https://supabase.co';
 const SB_KEY = 'sb_publishable_iV_nitvsNXmcstTaqNhKsg_9vEnUogf';
-const sb = window.supabase && SB_URL.startsWith('http') ? window.supabase.createClient(SB_URL, SB_KEY) : null;
+const sb = window.supabase ? window.supabase.createClient(SB_URL, SB_KEY) : null;
 let USER = null;
+const showModal = on => {const m = document.getElementById('auth-modal'); if (m) m.style.display = on ? 'flex' : 'none'};
 
 function requireAuth(fn) {
- if (!sb) return alert('Supabase keys not configured yet.');
+ if (!sb) return alert('Auth loading—refresh and try again.');
  if (USER) return fn();
- $('auth-msg').textContent = 'Log in or create an account to name, save, or share builds.';
- $('auth-modal').hidden = false;
+ document.getElementById('auth-msg').textContent = 'Log in or create an account to name, save, or share builds.';
+ showModal(true);
 }
 
 function getBuildPayload() {
  return {
-  name: ($('bname')?.value || '').trim() || 'Untitled Loadout',
+  name: (document.getElementById('bname')?.value || '').trim() || 'Untitled Loadout',
   sex: SEX, pose: POSE, held: HELD, dom: DOM_HAND,
-  h: $('hs')?.value || 178, w: $('ws')?.value || 72,
+  h: document.getElementById('hs')?.value || 178, w: document.getElementById('ws')?.value || 72,
   gear: Object.assign({}, S)
  };
 }
 
 function applyBuildPayload(b) {
  if (!b) return;
- if ($('bname')) $('bname').value = b.name || '';
+ if (document.getElementById('bname')) document.getElementById('bname').value = b.name || '';
  Object.keys(S).forEach(k => delete S[k]);
  if (b.gear) Object.assign(S, b.gear);
- if (b.dom) {DOM_HAND = b.dom; $('hr')?.classList.toggle('on', DOM_HAND == 'right'); $('hl')?.classList.toggle('on', DOM_HAND == 'left')}
- if (b.held) {HELD = b.held; if ($('wp')) $('wp').value = HELD}
- if (b.h && $('hs')) $('hs').value = b.h;
- if (b.w && $('ws')) $('ws').value = b.w;
- if (b.pose) {POSE = b.pose; if ($('ps')) $('ps').value = POSE}
- apply(); change();
- loadModel(b.sex || SEX);
+ if (b.dom) {DOM_HAND = b.dom; document.getElementById('hr')?.classList.toggle('on', DOM_HAND == 'right'); document.getElementById('hl')?.classList.toggle('on', DOM_HAND == 'left')}
+ if (b.held) {HELD = b.held; if (document.getElementById('wp')) document.getElementById('wp').value = HELD}
+ if (b.h && document.getElementById('hs')) document.getElementById('hs').value = b.h;
+ if (b.w && document.getElementById('ws')) document.getElementById('ws').value = b.w;
+ if (b.pose) {POSE = b.pose; if (document.getElementById('ps')) document.getElementById('ps').value = POSE}
+ apply(); change(); loadModel(b.sex || SEX);
 }
 
 async function refreshSavedList() {
- const box = $('saved-list'); if (!box || !sb) return;
+ const box = document.getElementById('saved-list'); if (!box || !sb) return;
  if (!USER) {box.innerHTML = ''; return}
  const {data} = await sb.from('loadouts').select('id, name, data').eq('user_id', USER.id).order('created_at', {ascending:false});
  box.innerHTML = (data || []).map(row =>
@@ -610,38 +611,44 @@ async function refreshSavedList() {
 if (sb) {
  sb.auth.onAuthStateChange((_ev, sess) => {
   USER = sess?.user || null;
-  if ($('auth-btn')) $('auth-btn').textContent = USER ? 'Log Out' : 'Log In';
-  if ($('bname')) $('bname').placeholder = USER ? 'Name your loadout...' : 'Name your loadout (Log in required)';
+  const ab = document.getElementById('auth-btn'); if (ab) ab.textContent = USER ? 'Log Out' : 'Log In';
+  const bn = document.getElementById('bname'); if (bn) bn.placeholder = USER ? 'Name your loadout...' : 'Name your loadout (Log in required)';
   refreshSavedList();
  });
 }
 
-if ($('auth-btn')) $('auth-btn').onclick = async () => {
- if (USER && sb) {await sb.auth.signOut(); toast('Logged out'); return}
- $('auth-msg').textContent = ''; $('auth-modal').hidden = false;
-};
-if ($('auth-close')) $('auth-close').onclick = () => $('auth-modal').hidden = true;
-if ($('bname')) $('bname').onfocus = () => {if (!USER) {$('bname').blur(); requireAuth(() => {})}};
+const abtn = document.getElementById('auth-btn');
+if (abtn) abtn.onclick = async () => {if (USER && sb) {await sb.auth.signOut(); toast('Logged out'); return} document.getElementById('auth-msg').textContent = ''; showModal(true)};
+const bn = document.getElementById('bname');
+if (bn) bn.onfocus = () => {if (!USER) {bn.blur(); requireAuth(() => {})}};
 
-if ($('auth-in')) $('auth-in').onclick = async () => {
- const {error} = await sb.auth.signInWithPassword({email:$('auth-email').value.trim(), password:$('auth-pass').value});
- if (error) {$('auth-msg').textContent = error.message; return}
- $('auth-modal').hidden = true; toast('Welcome back!');
+const oauth = prov => async () => {
+ if (!sb) return;
+ const {error} = await sb.auth.signInWithOAuth({provider:prov, options:{redirectTo:location.origin + location.pathname}});
+ if (error) document.getElementById('auth-msg').textContent = error.message;
 };
-if ($('auth-up')) $('auth-up').onclick = async () => {
- const {error} = await sb.auth.signUp({email:$('auth-email').value.trim(), password:$('auth-pass').value});
- if (error) {$('auth-msg').textContent = error.message; return}
- $('auth-modal').hidden = true; toast('Account created!');
+if (document.getElementById('auth-google')) document.getElementById('auth-google').onclick = oauth('google');
+if (document.getElementById('auth-discord')) document.getElementById('auth-discord').onclick = oauth('discord');
+
+if (document.getElementById('auth-in')) document.getElementById('auth-in').onclick = async () => {
+ const {error} = await sb.auth.signInWithPassword({email:document.getElementById('auth-email').value.trim(), password:document.getElementById('auth-pass').value});
+ if (error) {document.getElementById('auth-msg').textContent = error.message; return}
+ showModal(false); toast('Welcome back!');
+};
+if (document.getElementById('auth-up')) document.getElementById('auth-up').onclick = async () => {
+ const {error} = await sb.auth.signUp({email:document.getElementById('auth-email').value.trim(), password:document.getElementById('auth-pass').value});
+ if (error) {document.getElementById('auth-msg').textContent = error.message; return}
+ showModal(false); toast('Account created!');
 };
 
-if ($('bsave')) $('bsave').onclick = () => requireAuth(async () => {
+if (document.getElementById('bsave')) document.getElementById('bsave').onclick = () => requireAuth(async () => {
  const payload = getBuildPayload();
  const {error} = await sb.from('loadouts').insert({user_id:USER.id, name:payload.name, data:payload});
  if (error) return alert(error.message);
  toast('Saved "' + payload.name + '"'); refreshSavedList();
 });
 
-if ($('bshare')) $('bshare').onclick = () => requireAuth(async () => {
+if (document.getElementById('bshare')) document.getElementById('bshare').onclick = () => requireAuth(async () => {
  const payload = getBuildPayload();
  const {data, error} = await sb.from('loadouts').insert({user_id:USER.id, name:payload.name, data:payload}).select('id').single();
  if (error) return alert(error.message);
