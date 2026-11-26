@@ -48,7 +48,7 @@ const $ = s => document.getElementById(s), f$ = n => '$' + n.toFixed(2), hex = n
 
 /* ---------- scene ---------- */
 const T = THREE, el = $('stage'), sc = new T.Scene(), cam = new T.PerspectiveCamera(32, 1, .1, 50);
-const rd = new T.WebGLRenderer({antialias:true,alpha:true}); rd.shadowMap.enabled = true; rd.shadowMap.type = T.PCFSoftShadowMap; rd.setPixelRatio(Math.min(devicePixelRatio, 2)); el.appendChild(rd.domElement);
+const rd = new T.WebGLRenderer({antialias:true,alpha:true, new T.WebGLRenderer({antialias:true, preserveDrawingBuffer:true}); rd.shadowMap.enabled = true; rd.shadowMap.type = T.PCFSoftShadowMap; rd.setPixelRatio(Math.min(devicePixelRatio, 2)); el.appendChild(rd.domElement);
 sc.add(new T.HemisphereLight(0xffffff, 0x39402f, .5));
 const d1 = new T.DirectionalLight(0xfff4e6, 1.0); d1.position.set(2, 4, 3); d1.castShadow = true; d1.shadow.mapSize.set(2048, 2048); Object.assign(d1.shadow.camera, {left:-1.6,right:1.6,top:2.6,bottom:-.6,near:.5,far:12}); d1.shadow.bias = -.0006; d1.shadow.normalBias = .02; sc.add(d1);
 const d2 = new T.DirectionalLight(0xdadde0, .5); d2.position.set(-3, 2.5, -3); sc.add(d2);
@@ -552,51 +552,68 @@ loadCatalog().then(() => {addGuns(); CART = CART.map(String).filter(id => byId(i
   const c = e.target.closest('.c3'); if (c) {closeAll(); const nv = document.querySelector('.mainnav'); nv.classList.add('shut'); nv.addEventListener('mouseleave', () => nv.classList.remove('shut'), {once:true}); document.dispatchEvent(new CustomEvent('a360sub', {detail:c.dataset.sub}))}
  });
 })();
-/* ---------- accounts, named builds & sharing ---------- */
+/* ---------- accounts, named builds, snapshots & gallery ---------- */
 const SB_URL = 'https://supabase.co';
 const SB_KEY = 'sb_publishable_iV_nitvsNXmcstTaqNhKsg_9vEnUogf';
-let _sb = null, USER = null;
+let _sb = null, USER = null, SAVED_ROWS = [], EDIT_ID = null;
+
 function getSb() {
  if (!_sb && window.supabase) {
   _sb = window.supabase.createClient(SB_URL, SB_KEY);
   _sb.auth.onAuthStateChange((_ev, sess) => {
    USER = sess?.user || null;
    const ab = document.getElementById('auth-btn'); if (ab) ab.textContent = USER ? 'Log Out' : 'Log In';
-   const bn = document.getElementById('bname'); if (bn) bn.placeholder = USER ? 'Name your loadout...' : 'Name your loadout (Log in required)';
-   refreshSavedList();
+   loadSavedBuilds();
   });
  }
  return _sb;
 }
 getSb();
+
 const showModal = on => {const m = document.getElementById('auth-modal'); if (m) m.style.display = on ? 'flex' : 'none'};
+const showGallery = on => {const g = document.getElementById('builds-page'); if (g) g.style.display = on ? 'block' : 'none'};
 
 function requireAuth(fn) {
  if (!getSb()) {
   const s = document.createElement('script');
   s.src = 'https://unpkg.com';
   s.onload = () => {getSb(); requireAuth(fn)};
-  s.onerror = () => alert('Could not connect to auth server—check adblocker/tracking prevention.');
+  s.onerror = () => alert('Could not load auth service—disable strict tracking prevention for this site.');
   document.head.appendChild(s);
   return;
  }
  if (USER) return fn();
- document.getElementById('auth-msg').textContent = 'Log in or create an account to name, save, or share builds.';
+ document.getElementById('auth-msg').textContent = 'Log in or create an account to save, share, or view builds.';
  showModal(true);
+}
+
+function captureSnapshot() {
+ try {
+  if (typeof rd !== 'undefined' && typeof sc !== 'undefined' && typeof cam !== 'undefined') rd.render(sc, cam);
+  const c = document.querySelector('#stage canvas');
+  return c ? c.toDataURL('image/jpeg', 0.72) : '';
+ } catch (e) {return ''}
+}
+
+function nextDefaultName() {
+ const used = new Set(SAVED_ROWS.map(r => r.name.toLowerCase()));
+ let n = 1; while (used.has('new loadout ' + n)) n++;
+ return 'New Loadout ' + n;
 }
 
 function getBuildPayload() {
  return {
-  name: (document.getElementById('bname')?.value || '').trim() || 'Untitled Loadout',
+  name: (document.getElementById('bname')?.value || '').trim() || nextDefaultName(),
   sex: SEX, pose: POSE, held: HELD, dom: DOM_HAND,
   h: document.getElementById('hs')?.value || 178, w: document.getElementById('ws')?.value || 72,
   gear: Object.assign({}, S)
  };
 }
 
-function applyBuildPayload(b) {
+function applyBuildPayload(b, rowId) {
  if (!b) return;
- if (document.getElementById('bname')) document.getElementById('bname').value = b.name || '';
+ EDIT_ID = rowId || null;
+ if (document.getElementById('bname')) document.getElementById('bname').value = b.name || nextDefaultName();
  Object.keys(S).forEach(k => delete S[k]);
  if (b.gear) Object.assign(S, b.gear);
  if (b.dom) {DOM_HAND = b.dom; document.getElementById('hr')?.classList.toggle('on', DOM_HAND == 'right'); document.getElementById('hl')?.classList.toggle('on', DOM_HAND == 'left')}
@@ -607,79 +624,117 @@ function applyBuildPayload(b) {
  apply(); change(); loadModel(b.sex || SEX);
 }
 
-async function refreshSavedList() {
- const box = document.getElementById('saved-list'); if (!box || !sb) return;
- if (!USER) {box.innerHTML = ''; return}
- const {data} = await sb.from('loadouts').select('id, name, data').eq('user_id', USER.id).order('created_at', {ascending:false});
- box.innerHTML = (data || []).map(row =>
-  `<div style="display:flex;justify-content:space-between;align-items:center;background:#121210;padding:5px 8px;border-radius:5px;font-size:13px">
-    <button type="button" data-load="${row.id}" style="background:none;border:none;color:#d4a838;cursor:pointer;text-align:left;flex:1">${esc(row.name)}</button>
-    <button type="button" data-del="${row.id}" style="background:none;border:none;color:#888;cursor:pointer">✕</button>
-  </div>`
- ).join('');
- box.querySelectorAll('[data-load]').forEach(btn => btn.onclick = () => {
-  const found = (data || []).find(r => r.id === btn.dataset.load);
-  if (found) {applyBuildPayload(found.data); toast('Loaded "' + found.name + '"')}
- });
- box.querySelectorAll('[data-del]').forEach(btn => btn.onclick = async () => {
-  await sb.from('loadouts').delete().eq('id', btn.dataset.del);
-  refreshSavedList();
- });
+function renderBuildsGrid() {
+ const grid = document.getElementById('builds-grid'); if (!grid) return;
+ const q = (document.getElementById('builds-search')?.value || '').trim().toLowerCase();
+ const list = q ? SAVED_ROWS.filter(r => r.name.toLowerCase().includes(q)) : SAVED_ROWS;
+ if (!list.length) {
+  grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:48px 16px;color:#888">${q ? 'No saved loadouts match "' + esc(q) + '".' : 'No saved loadouts yet. Click "+ New Loadout" to build and save your first kit!'}</div>`;
+  return;
+ }
+ grid.innerHTML = list.map(r => `
+  <div class="bcard">
+   <div style="aspect-ratio:4/3;background:#0e0e0c;display:flex;align-items:center;justify-content:center;overflow:hidden">
+    ${r.thumb ? `<img src="${r.thumb}" alt="${esc(r.name)}" style="width:100%;height:100%;object-fit:cover">` : `<span style="color:#555;font-size:13px">3D Preview</span>`}
+   </div>
+   <div style="padding:12px 14px;display:flex;justify-content:space-between;align-items:center">
+    <strong style="font-size:16px;color:#fff">${esc(r.name)}</strong>
+    <button type="button" data-bdel="${r.id}" title="Delete" style="background:none;border:none;color:#777;cursor:pointer;font-size:15px">✕</button>
+   </div>
+   <div class="bcard-ov">
+    <button type="button" class="b pri" data-bedit="${r.id}" style="width:160px;justify-content:center">Edit Loadout</button>
+    <button type="button" class="b" data-bshare="${r.id}" style="width:160px;justify-content:center">Share</button>
+    <button type="button" class="b" data-brename="${r.id}" style="width:160px;justify-content:center">Rename</button>
+   </div>
+  </div>`).join('');
 }
 
-if (sb) {
- sb.auth.onAuthStateChange((_ev, sess) => {
-  USER = sess?.user || null;
-  const ab = document.getElementById('auth-btn'); if (ab) ab.textContent = USER ? 'Log Out' : 'Log In';
-  const bn = document.getElementById('bname'); if (bn) bn.placeholder = USER ? 'Name your loadout...' : 'Name your loadout (Log in required)';
-  refreshSavedList();
- });
+async function loadSavedBuilds() {
+ const s = getSb(); if (!s || !USER) {SAVED_ROWS = []; renderBuildsGrid(); return}
+ const {data} = await s.from('loadouts').select('id, name, data, thumb').eq('user_id', USER.id).order('created_at', {ascending:false});
+ SAVED_ROWS = data || [];
+ const bn = document.getElementById('bname');
+ if (bn && (!bn.value || /^New Loadout \d+$/i.test(bn.value)) && !EDIT_ID) bn.value = nextDefaultName();
+ renderBuildsGrid();
 }
 
-const abtn = document.getElementById('auth-btn');
-if (abtn) abtn.onclick = async () => {if (USER && sb) {await sb.auth.signOut(); toast('Logged out'); return} document.getElementById('auth-msg').textContent = ''; showModal(true)};
-const bn = document.getElementById('bname');
-if (bn) bn.onfocus = () => {if (!USER) {bn.blur(); requireAuth(() => {})}};
+async function saveCurrentBuild(copyLink) {
+ const s = getSb(); if (!s || !USER) return;
+ const payload = getBuildPayload(), thumb = captureSnapshot();
+ let rowId = EDIT_ID;
+ if (rowId) {
+  const {error} = await s.from('loadouts').update({name:payload.name, data:payload, thumb}).eq('id', rowId);
+  if (error) return alert(error.message);
+ } else {
+  const {data, error} = await s.from('loadouts').insert({user_id:USER.id, name:payload.name, data:payload, thumb}).select('id').single();
+  if (error) return alert(error.message);
+  rowId = data.id; EDIT_ID = rowId;
+ }
+ await loadSavedBuilds();
+ if (copyLink) {
+  const url = location.origin + location.pathname + '?build=' + rowId;
+  try {await navigator.clipboard.writeText(url); toast('Share link copied!')} catch (e) {prompt('Copy your loadout link:', url)}
+ } else {
+  toast('Saved "' + payload.name + '"');
+ }
+}
 
-const oauth = prov => async () => {
- if (!sb) return;
- const {error} = await sb.auth.signInWithOAuth({provider:prov, options:{redirectTo:location.origin + location.pathname}});
- if (error) document.getElementById('auth-msg').textContent = error.message;
-};
-if (document.getElementById('auth-google')) document.getElementById('auth-google').onclick = oauth('google');
-if (document.getElementById('auth-discord')) document.getElementById('auth-discord').onclick = oauth('discord');
-
-if (document.getElementById('auth-in')) document.getElementById('auth-in').onclick = async () => {
- const {error} = await sb.auth.signInWithPassword({email:document.getElementById('auth-email').value.trim(), password:document.getElementById('auth-pass').value});
- if (error) {document.getElementById('auth-msg').textContent = error.message; return}
- showModal(false); toast('Welcome back!');
-};
-if (document.getElementById('auth-up')) document.getElementById('auth-up').onclick = async () => {
- const {error} = await sb.auth.signUp({email:document.getElementById('auth-email').value.trim(), password:document.getElementById('auth-pass').value});
- if (error) {document.getElementById('auth-msg').textContent = error.message; return}
- showModal(false); toast('Account created!');
-};
-
-if (document.getElementById('bsave')) document.getElementById('bsave').onclick = () => requireAuth(async () => {
- const payload = getBuildPayload();
- const {error} = await sb.from('loadouts').insert({user_id:USER.id, name:payload.name, data:payload});
- if (error) return alert(error.message);
- toast('Saved "' + payload.name + '"'); refreshSavedList();
+document.addEventListener('click', async e => {
+ const id = e.target.id;
+ if (id === 'auth-btn') {
+  const s = getSb();
+  if (USER && s) {await s.auth.signOut(); USER = null; toast('Logged out'); return}
+  document.getElementById('auth-msg').textContent = ''; showModal(true);
+ } else if (id === 'auth-close') showModal(false);
+ else if (id === 'auth-google' || id === 'auth-discord') {
+  const s = getSb(); if (!s) return;
+  const {error} = await s.auth.signInWithOAuth({provider:id === 'auth-google' ? 'google' : 'discord', options:{redirectTo:location.origin + location.pathname}});
+  if (error) document.getElementById('auth-msg').textContent = error.message;
+ } else if (id === 'auth-in' || id === 'auth-up') {
+  const s = getSb(); if (!s) return;
+  const creds = {email:document.getElementById('auth-email').value.trim(), password:document.getElementById('auth-pass').value};
+  const {error} = id === 'auth-in' ? await s.auth.signInWithPassword(creds) : await s.auth.signUp(creds);
+  if (error) {document.getElementById('auth-msg').textContent = error.message; return}
+  showModal(false); toast(id === 'auth-in' ? 'Welcome back!' : 'Account created!');
+ } else if (id === 'bsave') requireAuth(() => saveCurrentBuild(false));
+ else if (id === 'bshare') requireAuth(() => saveCurrentBuild(true));
+ else if (id === 'my-builds-btn') requireAuth(() => {loadSavedBuilds(); showGallery(true)});
+ else if (id === 'builds-back') showGallery(false);
+ else if (id === 'new-loadout-btn') {
+  EDIT_ID = null; Object.keys(S).forEach(k => delete S[k]);
+  POSE = 'idle'; HELD = 'primary'; DOM_HAND = 'right';
+  if (document.getElementById('ps')) document.getElementById('ps').value = 'idle';
+  if (document.getElementById('wp')) document.getElementById('wp').value = 'primary';
+  if (document.getElementById('hs')) document.getElementById('hs').value = 178;
+  if (document.getElementById('ws')) document.getElementById('ws').value = 72;
+  if (document.getElementById('bname')) document.getElementById('bname').value = nextDefaultName();
+  apply(); change(); loadModel('male'); showGallery(false);
+ } else if (e.target.dataset.bedit) {
+  const row = SAVED_ROWS.find(r => r.id === e.target.dataset.bedit);
+  if (row) {applyBuildPayload(row.data, row.id); showGallery(false); toast('Editing "' + row.name + '"')}
+ } else if (e.target.dataset.bshare) {
+  const url = location.origin + location.pathname + '?build=' + e.target.dataset.bshare;
+  try {await navigator.clipboard.writeText(url); toast('Share link copied!')} catch (err) {prompt('Copy your loadout link:', url)}
+ } else if (e.target.dataset.brename) {
+  const row = SAVED_ROWS.find(r => r.id === e.target.dataset.brename); if (!row) return;
+  const nn = prompt('Rename loadout:', row.name); if (!nn || !nn.trim()) return;
+  const nextData = Object.assign({}, row.data, {name:nn.trim()});
+  await getSb().from('loadouts').update({name:nn.trim(), data:nextData}).eq('id', row.id);
+  if (EDIT_ID === row.id && document.getElementById('bname')) document.getElementById('bname').value = nn.trim();
+  loadSavedBuilds(); toast('Renamed to "' + nn.trim() + '"');
+ } else if (e.target.dataset.bdel) {
+  await getSb().from('loadouts').delete().eq('id', e.target.dataset.bdel);
+  if (EDIT_ID === e.target.dataset.bdel) EDIT_ID = null;
+  loadSavedBuilds();
+ }
 });
 
-if (document.getElementById('bshare')) document.getElementById('bshare').onclick = () => requireAuth(async () => {
- const payload = getBuildPayload();
- const {data, error} = await sb.from('loadouts').insert({user_id:USER.id, name:payload.name, data:payload}).select('id').single();
- if (error) return alert(error.message);
- const shareUrl = location.origin + location.pathname + '?build=' + data.id;
- try {await navigator.clipboard.writeText(shareUrl); toast('Share link copied!')} catch (e) {prompt('Copy your loadout link:', shareUrl)}
- refreshSavedList();
-});
+if (document.getElementById('builds-search')) document.getElementById('builds-search').oninput = renderBuildsGrid;
 
 (async () => {
- const bid = new URLSearchParams(location.search).get('build');
- if (bid && sb) {
-  const {data} = await sb.from('loadouts').select('data').eq('id', bid).single();
+ const bid = new URLSearchParams(location.search).get('build'), s = getSb();
+ if (bid && s) {
+  const {data} = await s.from('loadouts').select('data').eq('id', bid).single();
   if (data?.data) applyBuildPayload(data.data);
  }
 })();
