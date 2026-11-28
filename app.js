@@ -48,7 +48,7 @@ const $ = s => document.getElementById(s), f$ = n => '$' + n.toFixed(2), hex = n
 
 /* ---------- scene ---------- */
 const T = THREE, el = $('stage'), sc = new T.Scene(), cam = new T.PerspectiveCamera(32, 1, .1, 50);
-const rd = new T.WebGLRenderer({antialias:true,alpha:true, new T.WebGLRenderer({antialias:true, preserveDrawingBuffer:true}); rd.shadowMap.enabled = true; rd.shadowMap.type = T.PCFSoftShadowMap; rd.setPixelRatio(Math.min(devicePixelRatio, 2)); el.appendChild(rd.domElement);
+const rd = new T.WebGLRenderer({antialias:true, alpha:true, preserveDrawingBuffer:true}); rd.shadowMap.enabled = true; rd.shadowMap.type = T.PCFSoftShadowMap; rd.setPixelRatio(Math.min(devicePixelRatio, 2)); el.appendChild(rd.domElement);
 sc.add(new T.HemisphereLight(0xffffff, 0x39402f, .5));
 const d1 = new T.DirectionalLight(0xfff4e6, 1.0); d1.position.set(2, 4, 3); d1.castShadow = true; d1.shadow.mapSize.set(2048, 2048); Object.assign(d1.shadow.camera, {left:-1.6,right:1.6,top:2.6,bottom:-.6,near:.5,far:12}); d1.shadow.bias = -.0006; d1.shadow.normalBias = .02; sc.add(d1);
 const d2 = new T.DirectionalLight(0xdadde0, .5); d2.position.set(-3, 2.5, -3); sc.add(d2);
