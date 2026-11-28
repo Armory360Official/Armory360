@@ -649,7 +649,15 @@ function renderBuildsGrid() {
 }
 
 let PROFILE = null;
+const OWNER_EMAIL = 'jackalope.62512@gmail.com';
 
+function isReservedCallsign(name) {
+ if (USER && USER.email && USER.email.toLowerCase() === OWNER_EMAIL.toLowerCase()) return false;
+ const clean = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+ const exact = name.trim().toLowerCase();
+ const blockedWords = ['admin', 'administrator', 'moderator', 'mod', 'staff', 'support', 'official', 'system'];
+ return clean.includes('armory360') || blockedWords.includes(exact);
+}
 function fallbackAvatar(name) {
  const ch = (name || 'OP').slice(0, 2).toUpperCase();
  return 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://w3.org" width="96" height="96"><rect width="96" height="96" fill="#2b3024"/><text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" fill="#d4a838" font-family="sans-serif" font-weight="bold" font-size="36">${ch}</text></svg>`);
