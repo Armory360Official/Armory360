@@ -1,5 +1,5 @@
 const LIBS = ['https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
-             'https://unpkg.com'];/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js'];
+              'https://unpkg.com'];
 (function chain(i){
  if (i >= LIBS.length) return main();
  const s = document.createElement('script'); s.src = LIBS[i]; s.onload = () => chain(i + 1);
