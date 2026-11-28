@@ -552,7 +552,7 @@ loadCatalog().then(() => {addGuns(); CART = CART.map(String).filter(id => byId(i
  });
 })();
 /* ---------- accounts, named builds, snapshots & gallery ---------- */
-const SB_URL = 'https://ddocwakcetsiymiecbxg.supabase.co/rest/v1/';
+const SB_URL = 'https://ddocwakcetsiymiecbxg.supabase.co';
 const SB_KEY = 'sb_publishable_iV_nitvsNXmcstTaqNhKsg_9vEnUogf';
 let _sb = null, USER = null, SAVED_ROWS = [], EDIT_ID = null;
 
