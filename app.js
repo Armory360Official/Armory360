@@ -1,5 +1,5 @@
-const LIBS = ['https://cloudflare.com',
-              'https://cloudflare.com'];
+const LIBS = ['https://cdnjs.' + '://cloudflare.com',
+              'https://unpkg.' + 'com/three@0.128.0/examples/js/loaders/GLTFLoader.js'];
 (function chain(i){
  if (i >= LIBS.length) return main();
  const s = document.createElement('script'); s.src = LIBS[i]; s.onload = () => chain(i + 1);
