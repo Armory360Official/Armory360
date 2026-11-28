@@ -1,5 +1,5 @@
-const LIBS = ['https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
-              'https://unpkg.com'];
+const LIBS = ['https://cloudflare.com',
+              'https://cloudflare.com'];
 (function chain(i){
  if (i >= LIBS.length) return main();
  const s = document.createElement('script'); s.src = LIBS[i]; s.onload = () => chain(i + 1);
