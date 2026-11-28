@@ -64,7 +64,89 @@ const GUNS = {"m16-dmr":[[51370,"$149.00","Matrix Full Metal M16A4 Airsoft AEG R
     <div id="builds-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:18px"></div>
   </div>
 </div>
+  
+<div id="account-view" style="display:none;position:fixed;inset:0;background:#11110f;z-index:950;overflow-y:auto;padding:28px 18px;color:#fff">
+  <div style="max-width:760px;margin:0 auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #2a2a26;padding-bottom:14px;margin-bottom:22px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <button id="acc-back" class="b" type="button">← Back to Planner</button>
+        <h2 style="margin:0;font-size:24px;letter-spacing:.5px">ACCOUNT &amp; SETTINGS</h2>
+      </div>
+      <button id="acc-signout" class="b" type="button" style="border-color:#8b3a3a;color:#ff8a8a">Log Out</button>
+    </div>
 
+    <!-- Profile & PFP Card -->
+    <div style="background:#181816;border:1px solid #2c2c28;border-radius:10px;padding:20px;margin-bottom:18px">
+      <h3 style="margin:0 0 14px;font-size:15px;color:#d4a838;letter-spacing:.5px">OPERATOR PROFILE</h3>
+      <div style="display:flex;flex-wrap:wrap;gap:18px;align-items:center;margin-bottom:16px">
+        <img id="acc-pfp-preview" src="" alt="Profile Picture" style="width:84px;height:84px;border-radius:50%;object-fit:cover;border:2px solid #d4a838;background:#222">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <label class="b pri" style="cursor:pointer">
+              Upload Photo
+              <input id="acc-pfp-file" type="file" accept="image/*" style="display:none">
+            </label>
+            <button id="acc-pfp-snap" class="b" type="button">Use 3D Player Snapshot</button>
+          </div>
+          <span style="font-size:12px;color:#888">JPG, PNG, or WebP (auto-cropped to square)</span>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+        <div>
+          <label style="display:block;font-size:12px;color:#aaa;margin-bottom:4px">Callsign / Display Name</label>
+          <input id="acc-callsign" type="text" placeholder="e.g. Ghost01" style="width:100%;box-sizing:border-box;padding:9px;border-radius:6px;border:1px solid #333;background:#121210;color:#fff">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;color:#aaa;margin-bottom:4px">Account Email</label>
+          <input id="acc-email" type="text" disabled style="width:100%;box-sizing:border-box;padding:9px;border-radius:6px;border:1px solid #262622;background:#141412;color:#777">
+        </div>
+      </div>
+    </div>
+
+    <!-- Default Operator & Field Preferences -->
+    <div style="background:#181816;border:1px solid #2c2c28;border-radius:10px;padding:20px;margin-bottom:18px">
+      <h3 style="margin:0 0 14px;font-size:15px;color:#d4a838;letter-spacing:.5px">DEFAULT OPERATOR &amp; FIELD PREFERENCES</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">
+        <div>
+          <label style="display:block;font-size:12px;color:#aaa;margin-bottom:4px">Default Body Model</label>
+          <select id="acc-gender" style="width:100%;padding:9px;border-radius:6px;border:1px solid #333;background:#121210;color:#fff">
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;color:#aaa;margin-bottom:4px">Default Height (cm)</label>
+          <input id="acc-height" type="number" min="140" max="220" value="178" style="width:100%;box-sizing:border-box;padding:9px;border-radius:6px;border:1px solid #333;background:#121210;color:#fff">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;color:#aaa;margin-bottom:4px">Default Weight (kg)</label>
+          <input id="acc-weight" type="number" min="40" max="160" value="72" style="width:100%;box-sizing:border-box;padding:9px;border-radius:6px;border:1px solid #333;background:#121210;color:#fff">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;color:#aaa;margin-bottom:4px">Primary Field Terrain</label>
+          <select id="acc-terrain" style="width:100%;padding:9px;border-radius:6px;border:1px solid #333;background:#121210;color:#fff">
+            <option value="woodland">Woodland / Forest</option>
+            <option value="desert">Desert / Arid</option>
+            <option value="urban">Urban / CQB</option>
+            <option value="winter">Winter / Snow</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:16px;display:flex;align-items:center;gap:12px">
+        <button id="acc-save" class="b pri" type="button">Save Profile &amp; Settings</button>
+        <span id="acc-status" style="font-size:13px;color:#d4a838"></span>
+      </div>
+    </div>
+
+    <!-- Security & Data -->
+    <div style="background:#181816;border:1px solid #2c2c28;border-radius:10px;padding:20px">
+      <h3 style="margin:0 0 14px;font-size:15px;color:#d4a838;letter-spacing:.5px">SECURITY &amp; DATA</h3>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+        <input id="acc-newpass" type="password" placeholder="New password (min 6 chars)" style="padding:9px;border-radius:6px;border:1px solid #333;background:#121210;color:#fff;min-width:220px">
+        <button id="acc-pass-btn" class="b" type="button">Update Password</button>
+        <button id="acc-export" class="b" type="button">Export All Builds (JSON)</button>
+        
 <div id="auth-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);align-items:center;justify-content:center;z-index:999">
   <div style="background:#181816;border:1px solid #333;border-radius:10px;padding:22px;width:330px;max-width:92vw;color:#fff">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
