@@ -637,15 +637,95 @@ function renderBuildsGrid() {
     ${r.thumb ? `<img src="${r.thumb}" alt="${esc(r.name)}" style="width:100%;height:100%;object-fit:cover">` : `<span style="color:#555;font-size:13px">3D Preview</span>`}
    </div>
    <div style="padding:12px 14px;display:flex;justify-content:space-between;align-items:center">
-    <strong style="font-size:16px;color:#fff">${esc(r.name)}</strong>
-    <button type="button" data-bdel="${r.id}" title="Delete" style="background:none;border:none;color:#777;cursor:pointer;font-size:15px">✕</button>
+   <strong style="font-size:16px;color:#fff">${esc(r.name)}</strong>
    </div>
    <div class="bcard-ov">
     <button type="button" class="b pri" data-bedit="${r.id}" style="width:160px;justify-content:center">Edit Loadout</button>
     <button type="button" class="b" data-bshare="${r.id}" style="width:160px;justify-content:center">Share</button>
     <button type="button" class="b" data-brename="${r.id}" style="width:160px;justify-content:center">Rename</button>
+    <button type="button" class="b" data-bdel="${r.id}" style="width:160px;justify-content:center;border-color:#8b3a3a;color:#ff8a8a">Delete</button>
    </div>
   </div>`).join('');
+}
+
+let PROFILE = null;
+
+function fallbackAvatar(name) {
+ const ch = (name || 'OP').slice(0, 2).toUpperCase();
+ return 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg xmlns="http://w3.org" width="96" height="96"><rect width="96" height="96" fill="#2b3024"/><text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" fill="#d4a838" font-family="sans-serif" font-weight="bold" font-size="36">${ch}</text></svg>`);
+}
+
+function renderHeaderAccount() {
+ const btn = document.getElementById('auth-btn');
+ if (!btn) return;
+ if (!USER) {
+  btn.innerHTML = 'Log In';
+  btn.style.padding = '';
+  return;
+ }
+ const name = PROFILE?.callsign || USER.user_metadata?.full_name || USER.user_metadata?.name || USER.email?.split('@')[0] || 'Operator';
+ const pic = PROFILE?.avatar_url || USER.user_metadata?.avatar_url || fallbackAvatar(name);
+ btn.style.padding = '4px 10px 4px 5px';
+ btn.innerHTML = `<span style="display:inline-flex;align-items:center;gap:7px"><img src="${pic}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;border:1px solid #d4a838"><span>${esc(name)}</span></span>`;
+}
+
+async function loadProfile() {
+ const s = getSb();
+ if (!s || !USER) { PROFILE = null; renderHeaderAccount(); return; }
+ const {data} = await s.from('profiles').select('*').eq('id', USER.id).maybeSingle();
+ PROFILE = data || {
+  id: USER.id,
+  callsign: USER.user_metadata?.full_name || USER.user_metadata?.name || USER.email?.split('@')[0] || 'Operator',
+  avatar_url: USER.user_metadata?.avatar_url || '',
+  default_gender: 'male',
+  default_height: 178,
+  default_weight: 72,
+  default_terrain: 'woodland'
+ };
+ renderHeaderAccount();
+ if (!new URLSearchParams(location.search).get('build') && !EDIT_ID) {
+  if (document.getElementById('hs')) document.getElementById('hs').value = PROFILE.default_height || 178;
+  if (document.getElementById('ws')) document.getElementById('ws').value = PROFILE.default_weight || 72;
+  if (typeof apply === 'function') apply();
+  if (PROFILE.default_gender && typeof loadModel === 'function') loadModel(PROFILE.default_gender);
+ }
+}
+
+function openAccountView(show) {
+ const v = document.getElementById('account-view');
+ if (!v) return;
+ v.style.display = show ? 'block' : 'none';
+ if (!show || !USER) return;
+ const name = PROFILE?.callsign || USER.user_metadata?.full_name || USER.email?.split('@')[0] || 'Operator';
+ const pic = PROFILE?.avatar_url || USER.user_metadata?.avatar_url || fallbackAvatar(name);
+ document.getElementById('acc-pfp-preview').src = pic;
+ document.getElementById('acc-callsign').value = name;
+ document.getElementById('acc-email').value = USER.email || '(OAuth Account)';
+ document.getElementById('acc-gender').value = PROFILE?.default_gender || 'male';
+ document.getElementById('acc-height').value = PROFILE?.default_height || 178;
+ document.getElementById('acc-weight').value = PROFILE?.default_weight || 72;
+ document.getElementById('acc-terrain').value = PROFILE?.default_terrain || 'woodland';
+ document.getElementById('acc-status').textContent = '';
+}
+
+async function uploadAvatarDataUrl(dataUrl) {
+ const s = getSb(); if (!s || !USER) return;
+ const img = new Image();
+ await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = dataUrl; });
+ const c = document.createElement('canvas'); c.width = 256; c.height = 256;
+ const ctx = c.getContext('2d'), min = Math.min(img.width, img.height);
+ ctx.drawImage(img, (img.width - min) / 2, (img.height - min) / 2, min, min, 0, 0, 256, 256);
+ const blob = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.88));
+ const path = `${USER.id}/avatar.jpg`;
+ const {error} = await s.storage.from('avatars').upload(path, blob, {upsert: true, contentType: 'image/jpeg'});
+ if (error) return alert('Avatar upload failed: ' + error.message);
+ const {data} = s.storage.from('avatars').getPublicUrl(path);
+ const freshUrl = data.publicUrl + '?t=' + Date.now();
+ PROFILE = Object.assign({}, PROFILE, {avatar_url: freshUrl});
+ await s.from('profiles').upsert({id: USER.id, avatar_url: freshUrl, updated_at: new Date().toISOString()});
+ document.getElementById('acc-pfp-preview').src = freshUrl;
+ renderHeaderAccount();
+ toast('Profile picture updated!');
 }
 
 async function loadSavedBuilds() {
@@ -678,12 +758,54 @@ async function saveCurrentBuild(copyLink) {
  }
 }
 
+document.addEventListener('change', e => {
+ if (e.target.id === 'acc-pfp-file' && e.target.files?.[0]) {
+  const r = new FileReader();
+  r.onload = () => uploadAvatarDataUrl(r.result);
+  r.readAsDataURL(e.target.files[0]);
+ }
+});
+
 document.addEventListener('click', async e => {
- const id = e.target.id;
+ const btn = e.target.closest('button');
+ const id = btn ? btn.id : e.target.id;
  if (id === 'auth-btn') {
-  const s = getSb();
-  if (USER && s) {await s.auth.signOut(); USER = null; toast('Logged out'); return}
+  if (USER) { openAccountView(true); return; }
   document.getElementById('auth-msg').textContent = ''; showModal(true);
+ } else if (id === 'acc-back') openAccountView(false);
+ else if (id === 'acc-signout') {
+  const s = getSb(); if (s) await s.auth.signOut();
+  USER = null; PROFILE = null; renderHeaderAccount(); openAccountView(false); toast('Logged out');
+ } else if (id === 'acc-pfp-snap') {
+  if (typeof captureSnapshot === 'function') await uploadAvatarDataUrl(captureSnapshot());
+ } else if (id === 'acc-save') {
+  const s = getSb(); if (!s || !USER) return;
+  const row = {
+   id: USER.id,
+   callsign: document.getElementById('acc-callsign').value.trim() || 'Operator',
+   avatar_url: PROFILE?.avatar_url || '',
+   default_gender: document.getElementById('acc-gender').value,
+   default_height: parseInt(document.getElementById('acc-height').value, 10) || 178,
+   default_weight: parseInt(document.getElementById('acc-weight').value, 10) || 72,
+   default_terrain: document.getElementById('acc-terrain').value,
+   updated_at: new Date().toISOString()
+  };
+  const {error} = await s.from('profiles').upsert(row);
+  if (error) return alert(error.message);
+  PROFILE = row; renderHeaderAccount();
+  document.getElementById('acc-status').textContent = 'Saved!';
+  toast('Settings saved');
+ } else if (id === 'acc-pass-btn') {
+  const s = getSb(), pw = document.getElementById('acc-newpass').value;
+  if (!s || pw.length < 6) return alert('Password must be at least 6 characters.');
+  const {error} = await s.auth.updateUser({password: pw});
+  if (error) return alert(error.message);
+  document.getElementById('acc-newpass').value = '';
+  toast('Password updated!');
+ } else if (id === 'acc-export') {
+  await loadSavedBuilds();
+  const blob = new Blob([JSON.stringify(SAVED_ROWS, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'armory360-builds.json'; a.click();
  } else if (id === 'auth-close') showModal(false);
  else if (id === 'auth-google' || id === 'auth-discord') {
   const s = getSb(); if (!s) return;
@@ -694,7 +816,7 @@ document.addEventListener('click', async e => {
   const creds = {email:document.getElementById('auth-email').value.trim(), password:document.getElementById('auth-pass').value};
   const {error} = id === 'auth-in' ? await s.auth.signInWithPassword(creds) : await s.auth.signUp(creds);
   if (error) {document.getElementById('auth-msg').textContent = error.message; return}
-  showModal(false); toast(id === 'auth-in' ? 'Welcome back!' : 'Account created!');
+  showModal(false); await loadProfile(); toast(id === 'auth-in' ? 'Welcome back!' : 'Account created!');
  } else if (id === 'bsave') requireAuth(() => saveCurrentBuild(false));
  else if (id === 'bshare') requireAuth(() => saveCurrentBuild(true));
  else if (id === 'my-builds-btn') requireAuth(() => {loadSavedBuilds(); showGallery(true)});
@@ -703,38 +825,42 @@ document.addEventListener('click', async e => {
   EDIT_ID = null; Object.keys(S).forEach(k => delete S[k]);
   POSE = 'idle'; HELD = 'primary'; DOM_HAND = 'right';
   if (document.getElementById('ps')) document.getElementById('ps').value = 'idle';
-  if (document.getElementById('wp')) document.getElementById('wp').value = 'primary';
-  if (document.getElementById('hs')) document.getElementById('hs').value = 178;
-  if (document.getElementById('ws')) document.getElementById('ws').value = 72;
-  if (document.getElementById('bname')) document.getElementById('bname').value = nextDefaultName();
-  apply(); change(); loadModel('male'); showGallery(false);
- } else if (e.target.dataset.bedit) {
-  const row = SAVED_ROWS.find(r => r.id === e.target.dataset.bedit);
-  if (row) {applyBuildPayload(row.data, row.id); showGallery(false); toast('Editing "' + row.name + '"')}
- } else if (e.target.dataset.bshare) {
-  const url = location.origin + location.pathname + '?build=' + e.target.dataset.bshare;
-  try {await navigator.clipboard.writeText(url); toast('Share link copied!')} catch (err) {prompt('Copy your loadout link:', url)}
- } else if (e.target.dataset.brename) {
-  const row = SAVED_ROWS.find(r => r.id === e.target.dataset.brename); if (!row) return;
-  const nn = prompt('Rename loadout:', row.name); if (!nn || !nn.trim()) return;
-  const nextData = Object.assign({}, row.data, {name:nn.trim()});
-  await getSb().from('loadouts').update({name:nn.trim(), data:nextData}).eq('id', row.id);
-  if (EDIT_ID === row.id && document.getElementById('bname')) document.getElementById('bname').value = nn.trim();
-  loadSavedBuilds(); toast('Renamed to "' + nn.trim() + '"');
- } else if (e.target.dataset.bdel) {
-  await getSb().from('loadouts').delete().eq('id', e.target.dataset.bdel);
-  if (EDIT_ID === e.target.dataset.bdel) EDIT_ID = null;
-  loadSavedBuilds();
- }
+if (document.getElementById('wp')) document.getElementById('wp').value = 'primary';
+if (document.getElementById('hs')) document.getElementById('hs').value = PROFILE?.default_height || 178;
+if (document.getElementById('ws')) document.getElementById('ws').value = PROFILE?.default_weight || 72;
+if (document.getElementById('bname')) document.getElementById('bname').value = nextDefaultName();
+apply(); change(); loadModel(PROFILE?.default_gender || 'male'); showGallery(false);
+} else if (btn?.dataset.bedit) {
+const row = SAVED_ROWS.find(r => r.id === btn.dataset.bedit);
+if (row) {applyBuildPayload(row.data, row.id); showGallery(false); toast('Editing "' + row.name + '"')}
+} else if (btn?.dataset.bshare) {
+const url = location.origin + location.pathname + '?build=' + btn.dataset.bshare;
+try {await navigator.clipboard.writeText(url); toast('Share link copied!')} catch (err) {prompt('Copy your loadout link:', url)}
+} else if (btn?.dataset.brename) {
+const row = SAVED_ROWS.find(r => r.id === btn.dataset.brename); if (!row) return;
+const nn = prompt('Rename loadout:', row.name); if (!nn || !nn.trim()) return;
+const nextData = Object.assign({}, row.data, {name:nn.trim()});
+await getSb().from('loadouts').update({name:nn.trim(), data:nextData}).eq('id', row.id);
+if (EDIT_ID === row.id && document.getElementById('bname')) document.getElementById('bname').value = nn.trim();
+loadSavedBuilds(); toast('Renamed to "' + nn.trim() + '"');
+} else if (btn?.dataset.bdel) {
+await getSb().from('loadouts').delete().eq('id', btn.dataset.bdel);
+if (EDIT_ID === btn.dataset.bdel) EDIT_ID = null;
+loadSavedBuilds();
+}
 });
-
 if (document.getElementById('builds-search')) document.getElementById('builds-search').oninput = renderBuildsGrid;
-
 (async () => {
- const bid = new URLSearchParams(location.search).get('build'), s = getSb();
- if (bid && s) {
-  const {data} = await s.from('loadouts').select('data').eq('id', bid).single();
-  if (data?.data) applyBuildPayload(data.data);
- }
+const s = getSb();
+if (s) {
+const {data: {session}} = await s.auth.getSession();
+if (session?.user) { USER = session.user; await loadProfile(); }
+s.auth.onAuthStateChange((_ev, sess) => { USER = sess?.user || null; loadProfile(); });
+}
+const bid = new URLSearchParams(location.search).get('build');
+if (bid && s) {
+const {data} = await s.from('loadouts').select('data').eq('id', bid).single();
+if (data?.data) applyBuildPayload(data.data);
+}
 })();
 }
